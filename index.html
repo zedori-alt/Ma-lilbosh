@@ -53,9 +53,13 @@ select:focus-visible, button:focus-visible { outline: 2px solid var(--sky); outl
 .badge { font-weight: 700; font-size: 15px; color: #fff; border-radius: 999px; padding: 3px 12px; }
 .range { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .verdict-text { font-size: 20px; font-weight: 700; margin: 6px 0 12px; }
-.outfit { display: flex; align-items: center; gap: 12px; background: var(--chip); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
-.outfit .e { font-size: 34px; line-height: 1; }
-.outfit .w { font-size: 19px; font-weight: 700; }
+.outfits { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.outfit { display: grid; grid-template-columns: 64px 30px 1fr; align-items: center; gap: 8px; background: var(--chip); border-radius: 14px; padding: 10px 12px; }
+.outfit.past { opacity: .45; }
+.outfit .n { color: var(--muted); font-size: 14px; }
+.outfit .e { font-size: 24px; line-height: 1; text-align: center; }
+.outfit .w { font-size: 17px; font-weight: 700; }
+.outfit .w small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
 .wear { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .wear li { display: flex; gap: 10px; align-items: flex-start; background: var(--chip); border-radius: 12px; padding: 9px 12px; }
 .wear .e { font-size: 20px; line-height: 1.3; }
@@ -120,16 +124,60 @@ h2 { font-size: 17px; margin: 0 0 10px; }
 </div>
 
 <script>
-const CITIES = [
-  ["תל אביב", 32.0853, 34.7818], ["ירושלים", 31.7683, 35.2137], ["חיפה", 32.7940, 34.9896],
-  ["באר שבע", 31.2520, 34.7915], ["אילת", 29.5577, 34.9519], ["ראשון לציון", 31.9730, 34.7925],
-  ["פתח תקווה", 32.0871, 34.8875], ["נתניה", 32.3215, 34.8532], ["אשדוד", 31.8014, 34.6435],
-  ["אשקלון", 31.6688, 34.5743], ["הרצליה", 32.1624, 34.8447], ["רמת גן", 32.0684, 34.8248],
-  ["רחובות", 31.8928, 34.8113], ["כפר סבא", 32.1782, 34.9076], ["מודיעין", 31.8969, 35.0095],
-  ["טבריה", 32.7959, 35.5310], ["צפת", 32.9646, 35.4960], ["נצרת", 32.6996, 35.3035],
-  ["קריית שמונה", 33.2073, 35.5697]
+const CITIES = [ // Tel Aviv first (the fallback), the rest alphabetical
+  ["תל אביב", 32.0853, 34.7818],
+  ["אילת", 29.5577, 34.9519],
+  ["אריאל", 32.1046, 35.1745],
+  ["אשדוד", 31.8014, 34.6435],
+  ["אשקלון", 31.6688, 34.5743],
+  ["באר שבע", 31.252, 34.7915],
+  ["בית שמש", 31.747, 34.9881],
+  ["בני ברק", 32.0807, 34.8338],
+  ["בת ים", 32.0171, 34.7454],
+  ["גבעתיים", 32.0722, 34.8125],
+  ["דימונה", 31.07, 35.033],
+  ["הוד השרון", 32.15, 34.888],
+  ["הרצליה", 32.1624, 34.8447],
+  ["זכרון יעקב", 32.5707, 34.952],
+  ["חדרה", 32.434, 34.9196],
+  ["חולון", 32.0158, 34.7874],
+  ["חיפה", 32.794, 34.9896],
+  ["טבריה", 32.7959, 35.531],
+  ["יבנה", 31.878, 34.739],
+  ["יקנעם", 32.6593, 35.1059],
+  ["ירושלים", 31.7683, 35.2137],
+  ["כפר סבא", 32.1782, 34.9076],
+  ["כרמיאל", 32.919, 35.295],
+  ["לוד", 31.951, 34.8881],
+  ["מודיעין", 31.8969, 35.0095],
+  ["מעלה אדומים", 31.777, 35.298],
+  ["מצפה רמון", 30.61, 34.801],
+  ["נהריה", 33.0059, 35.0941],
+  ["נס ציונה", 31.9293, 34.7987],
+  ["נצרת", 32.6996, 35.3035],
+  ["נתניה", 32.3215, 34.8532],
+  ["עכו", 32.9281, 35.0818],
+  ["עפולה", 32.6078, 35.2897],
+  ["ערד", 31.2588, 35.2128],
+  ["פתח תקווה", 32.0871, 34.8875],
+  ["צפת", 32.9646, 35.496],
+  ["קריית גת", 31.61, 34.7642],
+  ["קריית שמונה", 33.2073, 35.5697],
+  ["ראש העין", 32.0956, 34.9566],
+  ["ראשון לציון", 31.973, 34.7925],
+  ["רחובות", 31.8928, 34.8113],
+  ["רמלה", 31.9279, 34.8625],
+  ["רמת גן", 32.0684, 34.8248],
+  ["רעננה", 32.1848, 34.8713],
+  ["שדרות", 31.525, 34.5961]
 ];
 const HERE = "here";
+// Name of the closest listed city, for the "my location" label
+function nearest(lat, lon) {
+  let best = null, bd = Infinity;
+  CITIES.forEach(([n, a, b]) => { const dd = (a - lat) ** 2 + ((b - lon) * Math.cos(lat * Math.PI / 180)) ** 2; if (dd < bd) { bd = dd; best = n; } });
+  return bd < 0.04 ? best : "המיקום שלי"; // within ~20 km
+}
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -186,17 +234,15 @@ const level = (t) => { t = adj(t); return LEVELS.findIndex((l) => t < l.max); };
 
 function outfit(day) {
   const { warmest, coldest, rain, uv, wind } = day;
-  const top = LEVELS[level(warmest)];
   const tips = [];
-  const lc = level(coldest), lw = level(warmest);
-  if (lc < lw && LEVELS[lc].layer) tips.push(["🌙", `בבוקר ובערב: ${LEVELS[lc].layer} (מרגיש כמו ${r(coldest)}°).`]);
+  const lw = level(warmest);
   if (lw >= 5) tips.push(["💧", "חם מאוד. שתו הרבה מים."]);
   if (rain >= 60) tips.push(["☂️", `סיכוי גבוה לגשם (${rain}%). מטרייה ונעליים סגורות.`]);
   else if (rain >= 30) tips.push(["🌂", `אולי ירד גשם (${rain}%). מטרייה קטנה בתיק.`]);
   if (uv >= 6) tips.push(["🧴", `קרינה חזקה (UV ${r(uv)}). קרם הגנה וכובע.`]);
   else if (uv >= 3 && lw >= 3) tips.push(["🧴", `קרינה בינונית (UV ${r(uv)}). קרם הגנה אם תהיו הרבה בחוץ.`]);
   if (wind >= 30) tips.push(["💨", `רוח חזקה (עד ${r(wind)} קמ״ש). עדיף משהו נגד רוח.`]);
-  return { top, tips };
+  return { tips };
 }
 
 // Today's date (YYYY-MM-DD) in the forecast's time zone, so cached data never shows yesterday as "today".
@@ -234,6 +280,7 @@ function getPosition() {
 
 // ---------- render ----------
 // Hours are inclusive. Night runs 22:00 to 05:00 the next morning.
+const WEAR_PARTS = [["בוקר", 7, 11, "min"], ["צהריים", 12, 16, "max"], ["ערב", 17, 22, "min"]];
 const PARTS = [["בוקר", 6, 11], ["צהריים", 12, 16], ["ערב", 17, 21], ["לילה", 22, 29]];
 let state = { data: null, tab: 0, stale: false };
 
@@ -304,9 +351,23 @@ function render() {
   wearCard.append(el("div", "verdict-text", coldEnds
     ? `${when} קריר בבוקר ובערב, ${f.word} בצהריים${rainy}.`
     : `${state.tab ? "מחר יהיה" : "היום"} ${f.word}${rainy}.`));
-  const { top, tips } = outfit(day);
-  const o = el("div", "outfit"); o.append(el("span", "e", top.emoji), el("span", "w", top.main));
-  wearCard.append(o);
+  // What to wear in the morning, at noon and in the evening.
+  // Morning/evening go by the coldest feels-like hour in that part, noon by the warmest, so you are never under-dressed.
+  const box = el("div", "outfits");
+  const isToday = state.tab === 0, hourNow = localHour(tz);
+  WEAR_PARTS.forEach(([name, from, to, pick]) => {
+    const ks = []; for (let h = from; h <= to; h++) { const k = H.time.indexOf(day.date + "T" + String(h).padStart(2, "0") + ":00"); if (k >= 0) ks.push(k); }
+    if (!ks.length) return;
+    const feels = ks.map((k) => H.apparent_temperature[k]);
+    const t = pick === "max" ? Math.max(...feels) : Math.min(...feels);
+    const L = LEVELS[level(t)];
+    const row = el("div", "outfit" + (isToday && hourNow > to ? " past" : ""));
+    const w = el("div", "w", L.main); w.append(el("small", null, "מרגיש כמו " + r(t) + "°"));
+    row.append(el("div", "n", name), el("div", "e", L.emoji), w);
+    box.append(row);
+  });
+  wearCard.append(box);
+  const { tips } = outfit(day);
   const ul = el("ul", "wear");
   tips.forEach(([e, t]) => { const li = el("li"); li.append(el("span", "e", e), el("span", null, t)); ul.append(li); });
   wearCard.append(ul);
@@ -395,7 +456,7 @@ const sel = $("#city");
 sel.add(new Option("📍 המיקום שלי", HERE));
 CITIES.forEach((c, i) => sel.add(new Option(c[0], i)));
 const savedCity = store.get("city");
-sel.value = savedCity == null ? "0" : String(savedCity);
+sel.value = savedCity == null ? HERE : String(savedCity);
 if (sel.selectedIndex < 0) sel.value = "0";
 sel.onchange = () => { store.set("city", sel.value); state.tab = 0; refresh(); };
 
@@ -414,7 +475,14 @@ async function refresh() {
       name = HERE; tz = "auto";
       const prev = store.get("here");
       try { [lat, lon] = await getPosition(); store.set("here", [lat, lon]); }
-      catch (e) { if (prev) [lat, lon] = prev; else { showError(e, "load"); return; } }
+      catch (e) {
+        if (prev) [lat, lon] = prev;
+        else { // no permission and nothing saved: show Tel Aviv instead of an error
+          sel.value = "0"; busy = false; $("#updated").textContent = "אין גישה למיקום, מציג תל אביב";
+          return refresh();
+        }
+      }
+      sel.options[0].textContent = "📍 " + nearest(lat, lon);
     } else {
       const c = CITIES[+sel.value] || CITIES[0];
       [name, lat, lon] = c; tz = "Asia/Jerusalem";
@@ -435,7 +503,7 @@ async function refresh() {
       state.data = data; state.stale = false; lastLoad = Date.now();
       store.set("wx:" + name, { data, at: lastLoad });
       render();
-      $("#updated").textContent = "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+      $("#updated").textContent = (sel.value === "0" && store.get("city") == null ? "אין גישה למיקום, מציג תל אביב · " : "") + "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
     } catch (e) { console.error(e); showError(e, "render"); }
   } finally { busy = false; }
 }
