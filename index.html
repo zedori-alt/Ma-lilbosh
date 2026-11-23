@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מה ללבוש</title>
+<meta name="description" content="מזג האוויר ומה ללבוש היום ומחר">
+<meta name="theme-color" content="#0f6fa8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="מה ללבוש">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+/* Layout: one phone-width column. "Now" card, verdict + what to wear, the day in four parts, 24 hours, 7 days. */
+:root {
+  --bg: #eaf2f7; --surface: #ffffff; --ink: #14202b; --muted: #5d6d7c; --line: #d5e1ea;
+  --sky: #0f6fa8; --sky-ink: #ffffff; --cold: #3b82c4; --mild: #3aa17e; --warm: #e39b26; --hot: #d9542b;
+  --chip: #eef4f8;
+  --font: -apple-system, "SF Hebrew", "Segoe UI", Rubik, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0c141c; --surface: #15212c; --ink: #e9f0f5; --muted: #94a6b6; --line: #24323f;
+          --sky: #11507a; --chip: #1c2a37; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+select, button { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+button { cursor: pointer; }
+select:focus-visible, button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+
+.now { background: var(--sky); color: var(--sky-ink); border-radius: 22px; padding: 20px 22px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.now .temp { font-size: 64px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.now .icon { font-size: 56px; line-height: 1; }
+.now .desc { font-size: 18px; font-weight: 500; }
+.now .meta { grid-column: 1 / -1; font-size: 14px; opacity: .9; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.tabs button { border-radius: 999px; padding: 5px 14px; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.verdict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.badge { font-weight: 700; font-size: 15px; color: #fff; border-radius: 999px; padding: 3px 12px; }
+.range { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.verdict-text { font-size: 20px; font-weight: 700; margin: 6px 0 12px; }
+.outfit { display: flex; align-items: center; gap: 12px; background: var(--chip); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+.outfit .e { font-size: 34px; line-height: 1; }
+.outfit .w { font-size: 19px; font-weight: 700; }
+.wear { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wear li { display: flex; gap: 10px; align-items: flex-start; background: var(--chip); border-radius: 12px; padding: 9px 12px; }
+.wear .e { font-size: 20px; line-height: 1.3; }
+
+h2 { font-size: 17px; margin: 0 0 10px; }
+.parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.part { text-align: center; background: var(--chip); border-radius: 14px; padding: 10px 4px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.part .n { font-size: 13px; color: var(--muted); }
+.part .i { font-size: 24px; }
+.part .t { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.part .bar { width: 70%; height: 5px; border-radius: 3px; }
+.part .r { font-size: 12px; color: var(--muted); min-height: 18px; }
+
+.hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.hour { flex: 0 0 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; }
+.hour .col { width: 22px; height: 70px; background: var(--chip); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.hour .fill { width: 100%; border-radius: 6px; }
+.hour .tt { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hour .hh { color: var(--muted); font-variant-numeric: tabular-nums; }
+.hour .rp { color: var(--cold); font-size: 11px; min-height: 16px; font-variant-numeric: tabular-nums; }
+
+.days { list-style: none; margin: 0; padding: 0; }
+.days li { display: grid; grid-template-columns: 64px 34px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; }
+.days li + li { border-top: 1px solid var(--line); }
+.days .dn { font-weight: 500; }
+.days .di { font-size: 20px; text-align: center; line-height: 1.1; }
+.days .di small { display: block; font-size: 11px; color: var(--cold); font-variant-numeric: tabular-nums; }
+.days .track { height: 6px; background: var(--chip); border-radius: 3px; position: relative; }
+.days .seg { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.days .mm { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.days .mm b { font-weight: 700; }
+
+.prefs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.seg-ctl { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg-ctl button { border: 0; border-radius: 0; padding: 5px 12px; font-size: 14px; background: var(--surface); }
+.seg-ctl button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+.msg { text-align: center; color: var(--muted); padding: 30px 10px; }
+.note { font-size: 13px; color: var(--muted); text-align: center; }
+.foot { font-size: 12px; color: var(--muted); text-align: center; }
+.foot a { color: inherit; }
+@media (max-width: 380px) { .parts { grid-template-columns: repeat(2, 1fr); } .now .temp { font-size: 52px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מה ללבוש</h1>
+    <select id="city" aria-label="מיקום"></select>
+  </header>
+
+  <div id="app"><div class="msg">טוען את מזג האוויר…</div></div>
+
+  <div class="card prefs">
+    <span>בדרך כלל לי:</span>
+    <span class="seg-ctl" id="bias" role="group" aria-label="רגישות לקור">
+      <button data-v="-3">קר מהר</button><button data-v="0">רגיל</button><button data-v="3">חם מהר</button>
+    </span>
+  </div>
+
+  <div class="foot">נתוני מזג אוויר: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <span id="updated"></span></div>
+</div>
+
+<script>
+const CITIES = [
+  ["תל אביב", 32.0853, 34.7818], ["ירושלים", 31.7683, 35.2137], ["חיפה", 32.7940, 34.9896],
+  ["באר שבע", 31.2520, 34.7915], ["אילת", 29.5577, 34.9519], ["ראשון לציון", 31.9730, 34.7925],
+  ["פתח תקווה", 32.0871, 34.8875], ["נתניה", 32.3215, 34.8532], ["אשדוד", 31.8014, 34.6435],
+  ["אשקלון", 31.6688, 34.5743], ["הרצליה", 32.1624, 34.8447], ["רמת גן", 32.0684, 34.8248],
+  ["רחובות", 31.8928, 34.8113], ["כפר סבא", 32.1782, 34.9076], ["מודיעין", 31.8969, 35.0095],
+  ["טבריה", 32.7959, 35.5310], ["צפת", 32.9646, 35.4960], ["נצרת", 32.6996, 35.3035],
+  ["קריית שמונה", 33.2073, 35.5697]
+];
+const HERE = "here";
+
+// ---------- helpers ----------
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const r = (x) => { const v = Math.round(x); return Object.is(v, -0) ? 0 : v; };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+// WMO weather codes (Open-Meteo docs) -> [icon, Hebrew description]
+function sky(code, isDay = 1) {
+  if (code === 0) return [isDay ? "☀️" : "🌙", "שמיים בהירים"];
+  if (code === 1) return [isDay ? "🌤️" : "🌙", "בהיר ברובו"];
+  if (code === 2) return [isDay ? "⛅" : "☁️", "מעונן חלקית"];
+  if (code === 3) return ["☁️", "מעונן"];
+  if (code === 45 || code === 48) return ["🌫️", "ערפל"];
+  if (code >= 51 && code <= 57) return ["🌦️", "טפטוף"];
+  if (code >= 61 && code <= 67) return ["🌧️", "גשם"];
+  if (code >= 71 && code <= 77) return ["🌨️", "שלג"];
+  if (code >= 80 && code <= 82) return ["🌦️", "ממטרים"];
+  if (code >= 85 && code <= 86) return ["🌨️", "ממטרי שלג"];
+  if (code >= 95) return ["⛈️", "סופת רעמים"];
+  return ["🌡️", ""];
+}
+
+// Personal bias: "I get cold fast" shifts every reading down 3°, "I get hot fast" shifts up.
+let bias = +(store.get("bias") ?? 0);
+const adj = (t) => t + bias;
+
+// How it feels, from the (adjusted) "feels like" temperature
+function feel(t) {
+  t = adj(t);
+  if (t < 10) return { word: "קר מאוד", color: "var(--cold)" };
+  if (t < 16) return { word: "קר", color: "var(--cold)" };
+  if (t < 20) return { word: "קריר", color: "var(--mild)" };
+  if (t < 26) return { word: "נעים", color: "var(--mild)" };
+  if (t < 30) return { word: "חם", color: "var(--warm)" };
+  return { word: "חם מאוד", color: "var(--hot)" };
+}
+function tempColor(t) { t = adj(t); return t < 16 ? "var(--cold)" : t < 26 ? "var(--mild)" : t < 30 ? "var(--warm)" : "var(--hot)"; }
+
+// Clothing in general categories only, from the feels-like temperature.
+// level: 0 coldest ... 5 hottest. layer = what to add on top at that level.
+const LEVELS = [
+  { max: 12, emoji: "🧥", main: "בגדים ארוכים ומעיל חם", layer: "מעיל חם" },
+  { max: 17, emoji: "🧥", main: "בגדים ארוכים וג'קט", layer: "ג'קט" },
+  { max: 21, emoji: "👖", main: "בגדים ארוכים וסווטשרט", layer: "סווטשרט" },
+  { max: 25, emoji: "👕", main: "קצר או ארוך דק", layer: "שכבה דקה" },
+  { max: 30, emoji: "👕", main: "בגדים קצרים", layer: null },
+  { max: 99, emoji: "🩳", main: "בגדים קצרים וקלים", layer: null }
+];
+const level = (t) => { t = adj(t); return LEVELS.findIndex((l) => t < l.max); };
+
+function outfit(day) {
+  const { warmest, coldest, rain, uv, wind } = day;
+  const top = LEVELS[level(warmest)];
+  const tips = [];
+  const lc = level(coldest), lw = level(warmest);
+  if (lc < lw && LEVELS[lc].layer) tips.push(["🌙", `בבוקר ובערב: ${LEVELS[lc].layer} (מרגיש כמו ${r(coldest)}°).`]);
+  if (lw >= 5) tips.push(["💧", "חם מאוד. שתו הרבה מים."]);
+  if (rain >= 60) tips.push(["☂️", `סיכוי גבוה לגשם (${rain}%). מטרייה ונעליים סגורות.`]);
+  else if (rain >= 30) tips.push(["🌂", `אולי ירד גשם (${rain}%). מטרייה קטנה בתיק.`]);
+  if (uv >= 6) tips.push(["🧴", `קרינה חזקה (UV ${r(uv)}). קרם הגנה וכובע.`]);
+  else if (uv >= 3 && lw >= 3) tips.push(["🧴", `קרינה בינונית (UV ${r(uv)}). קרם הגנה אם תהיו הרבה בחוץ.`]);
+  if (wind >= 30) tips.push(["💨", `רוח חזקה (עד ${r(wind)} קמ״ש). עדיף משהו נגד רוח.`]);
+  return { top, tips };
+}
+
+// Today's date (YYYY-MM-DD) in the forecast's time zone, so cached data never shows yesterday as "today".
+function localDate(tz, offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 864e5);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+function localHour(tz) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(new Date());
+  return +parts;
+}
+
+// ---------- data ----------
+async function load(lat, lon, tz) {
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+    "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day" +
+    "&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,uv_index,wind_speed_10m,is_day" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_probability_max,precipitation_sum,uv_index_max,wind_speed_10m_max,sunrise,sunset" +
+    "&timezone=" + encodeURIComponent(tz) + "&forecast_days=8";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function getPosition() {
+  return new Promise((ok, fail) => {
+    if (!navigator.geolocation) return fail(new Error("אין גישה למיקום בדפדפן הזה"));
+    navigator.geolocation.getCurrentPosition(
+      (p) => ok([+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3)]),
+      (e) => fail(new Error(e.code === 1 ? "לא ניתנה הרשאה למיקום" : "לא הצלחתי למצוא את המיקום")),
+      { timeout: 10000, maximumAge: 30 * 60 * 1000 }
+    );
+  });
+}
+
+// ---------- render ----------
+// Hours are inclusive. Night runs 22:00 to 05:00 the next morning.
+const PARTS = [["בוקר", 6, 11], ["צהריים", 12, 16], ["ערב", 17, 21], ["לילה", 22, 29]];
+let state = { data: null, tab: 0, stale: false };
+
+function dayInfo(data, i) {
+  const d = data.daily, H = data.hourly;
+  const date = d.time[i];
+  // feels-like range during waking hours (07:00–22:00) drives the clothing advice
+  const idx = [];
+  H.time.forEach((t, k) => { const h = +t.slice(11, 13); if (t.startsWith(date) && h >= 7 && h <= 22) idx.push(k); });
+  const feels = idx.map((k) => H.apparent_temperature[k]).filter((x) => x != null);
+  return {
+    date,
+    warmest: feels.length ? Math.max(...feels) : d.apparent_temperature_max[i],
+    coldest: feels.length ? Math.min(...feels) : d.apparent_temperature_min[i],
+    tmax: d.temperature_2m_max[i], tmin: d.temperature_2m_min[i],
+    rain: d.precipitation_probability_max[i] ?? 0, mm: d.precipitation_sum[i] ?? 0,
+    uv: d.uv_index_max[i] ?? 0, wind: d.wind_speed_10m_max[i] ?? 0,
+    sunrise: d.sunrise[i], sunset: d.sunset[i], code: d.weather_code[i]
+  };
+}
+
+function card(title) { const c = el("div", "card"); c.style.marginTop = "16px"; if (title) c.append(el("h2", null, title)); return c; }
+
+function render() {
+  const data = state.data, app = $("#app");
+  app.textContent = "";
+  const tz = data.timezone, H = data.hourly, d = data.daily;
+  const today = d.time.indexOf(localDate(tz));
+  if (today < 0) throw new Error("הנתונים השמורים ישנים מדי");
+
+  // Now. With fresh data use "current"; with old cached data use this hour from the hourly forecast.
+  let c = data.current;
+  if (state.stale) {
+    const k = H.time.indexOf(localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0") + ":00");
+    if (k >= 0) c = { time: H.time[k], temperature_2m: H.temperature_2m[k], apparent_temperature: H.apparent_temperature[k],
+                      relative_humidity_2m: null, weather_code: H.weather_code[k], wind_speed_10m: H.wind_speed_10m[k], is_day: H.is_day[k] };
+  }
+  const [icon, desc] = sky(c.weather_code, c.is_day);
+  const now = el("div", "now");
+  now.append(el("div", "temp", r(c.temperature_2m) + "°"), el("div", "icon", icon), el("div", "desc", desc));
+  const meta = el("div", "meta");
+  meta.append(el("span", null, "מרגיש כמו " + r(c.apparent_temperature) + "°"));
+  if (c.relative_humidity_2m != null) meta.append(el("span", null, "לחות " + r(c.relative_humidity_2m) + "%"));
+  meta.append(el("span", null, "רוח " + r(c.wind_speed_10m) + " קמ״ש"));
+  now.append(meta);
+  app.append(now);
+
+  // Verdict + what to wear (today / tomorrow)
+  const wearCard = card();
+  const tabs = el("div", "tabs"); tabs.setAttribute("role", "tablist");
+  ["היום", "מחר"].forEach((name, i) => {
+    const b = el("button", null, name); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", state.tab === i);
+    b.onclick = () => { state.tab = i; render(); };
+    tabs.append(b);
+  });
+  wearCard.append(tabs);
+  const di = today + state.tab;
+  const day = dayInfo(data, di);
+  const f = feel(day.warmest);
+  const v = el("div", "verdict");
+  const badge = el("span", "badge", f.word); badge.style.background = f.color;
+  v.append(badge, el("span", "range", r(day.tmin) + "°–" + r(day.tmax) + "°"),
+           el("span", "range", "זריחה " + day.sunrise.slice(11, 16) + " · שקיעה " + day.sunset.slice(11, 16)));
+  wearCard.append(v);
+  const when = state.tab ? "מחר" : "היום";
+  const coldEnds = adj(day.coldest) < 16 && adj(day.warmest) >= 20;
+  const rainy = day.rain >= 60 ? " וגשום" : "";
+  wearCard.append(el("div", "verdict-text", coldEnds
+    ? `${when} קריר בבוקר ובערב, ${f.word} בצהריים${rainy}.`
+    : `${state.tab ? "מחר יהיה" : "היום"} ${f.word}${rainy}.`));
+  const { top, tips } = outfit(day);
+  const o = el("div", "outfit"); o.append(el("span", "e", top.emoji), el("span", "w", top.main));
+  wearCard.append(o);
+  const ul = el("ul", "wear");
+  tips.forEach(([e, t]) => { const li = el("li"); li.append(el("span", "e", e), el("span", null, t)); ul.append(li); });
+  wearCard.append(ul);
+  app.append(wearCard);
+
+  // Day in four parts
+  const partsCard = card(when + " לאורך היום");
+  const grid = el("div", "parts");
+  const base = H.time.indexOf(day.date + "T00:00");
+  PARTS.forEach(([name, from, to]) => {
+    const ks = []; for (let h = from; h <= to; h++) if (base >= 0 && H.time[base + h]) ks.push(base + h);
+    if (!ks.length) return;
+    const feelAvg = ks.reduce((s, k) => s + H.apparent_temperature[k], 0) / ks.length;
+    const tempAvg = ks.reduce((s, k) => s + H.temperature_2m[k], 0) / ks.length;
+    const rainMax = Math.max(...ks.map((k) => H.precipitation_probability[k] ?? 0));
+    const mid = ks[Math.floor(ks.length / 2)];
+    const p = el("div", "part");
+    const bar = el("div", "bar"); bar.style.background = tempColor(feelAvg);
+    p.append(el("div", "n", name), el("div", "i", sky(H.weather_code[mid], H.is_day[mid])[0]), el("div", "t", r(tempAvg) + "°"), bar,
+             el("div", "r", rainMax >= 30 ? "☂ " + rainMax + "%" : feel(feelAvg).word));
+    grid.append(p);
+  });
+  partsCard.append(grid);
+  app.append(partsCard);
+
+  // Next 24 hours, starting with the current hour
+  const hoursCard = card("24 השעות הקרובות");
+  const strip = el("div", "hours");
+  const nowHour = localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0");
+  let start = H.time.findIndex((t) => t.slice(0, 13) >= nowHour); if (start < 0) start = 0;
+  const end = Math.min(start + 24, H.time.length);
+  const slice = H.temperature_2m.slice(start, end);
+  const lo = Math.min(...slice) - 2, hi = Math.max(...slice) + 1;
+  for (let k = start; k < end; k++) {
+    const t = H.temperature_2m[k], rp = H.precipitation_probability[k] ?? 0;
+    const hr = el("div", "hour");
+    const col = el("div", "col"); const fill = el("div", "fill");
+    fill.style.height = Math.max(8, ((t - lo) / (hi - lo)) * 100) + "%"; fill.style.background = tempColor(H.apparent_temperature[k]);
+    col.append(fill);
+    hr.append(el("div", "tt", r(t) + "°"), col, el("div", null, sky(H.weather_code[k], H.is_day[k])[0]),
+              el("div", "rp", rp >= 20 ? rp + "%" : ""), el("div", "hh", k === start ? "עכשיו" : H.time[k].slice(11, 16)));
+    strip.append(hr);
+  }
+  hoursCard.append(strip);
+  app.append(hoursCard);
+
+  // 7 days from today
+  const weekCard = card("השבוע");
+  const list = el("ul", "days");
+  const idxs = []; for (let i = today; i < Math.min(today + 7, d.time.length); i++) idxs.push(i);
+  const wkLo = Math.min(...idxs.map((i) => d.temperature_2m_min[i])), wkHi = Math.max(...idxs.map((i) => d.temperature_2m_max[i]));
+  const dayName = new Intl.DateTimeFormat("he-IL", { weekday: "short", timeZone: "UTC" });
+  idxs.forEach((i, n) => {
+    const li = el("li");
+    const name = n === 0 ? "היום" : n === 1 ? "מחר" : dayName.format(new Date(d.time[i] + "T12:00:00Z"));
+    const track = el("div", "track"); const seg = el("div", "seg");
+    const span = wkHi - wkLo || 1;
+    seg.style.right = ((d.temperature_2m_min[i] - wkLo) / span) * 100 + "%";
+    seg.style.width = Math.max(4, ((d.temperature_2m_max[i] - d.temperature_2m_min[i]) / span) * 100) + "%";
+    seg.style.background = `linear-gradient(to left, ${tempColor(d.temperature_2m_min[i])}, ${tempColor(d.temperature_2m_max[i])})`;
+    track.append(seg);
+    const mm = el("div", "mm"); mm.append(el("b", null, r(d.temperature_2m_max[i]) + "°"), document.createTextNode(" / " + r(d.temperature_2m_min[i]) + "°"));
+    const icn = el("div", "di", sky(d.weather_code[i])[0]);
+    const rp = d.precipitation_probability_max[i] ?? 0;
+    if (rp >= 30) icn.append(el("small", null, rp + "%"));
+    li.append(el("div", "dn", name), icn, track, mm);
+    list.append(li);
+  });
+  weekCard.append(list);
+  app.append(weekCard);
+}
+
+function showError(err, kind) {
+  const app = $("#app"); app.textContent = "";
+  const box = el("div", "msg", kind === "render"
+    ? "מזג האוויר הגיע, אבל משהו נשבר בהצגה שלו."
+    : "לא הצלחתי לטעון את מזג האוויר. בדקו שיש חיבור לאינטרנט.");
+  const detail = el("div", null, "פרטים: " + (err && err.message ? err.message : String(err)));
+  detail.style.cssText = "font-size:12px;margin-top:8px;opacity:.8";
+  const b = el("button", null, "נסו שוב"); b.style.marginTop = "10px"; b.onclick = refresh;
+  box.append(detail, b); app.append(box);
+}
+
+// ---------- start ----------
+const sel = $("#city");
+sel.add(new Option("📍 המיקום שלי", HERE));
+CITIES.forEach((c, i) => sel.add(new Option(c[0], i)));
+const savedCity = store.get("city");
+sel.value = savedCity == null ? "0" : String(savedCity);
+if (sel.selectedIndex < 0) sel.value = "0";
+sel.onchange = () => { store.set("city", sel.value); state.tab = 0; refresh(); };
+
+function paintBias() { document.querySelectorAll("#bias button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === bias)); }
+document.querySelectorAll("#bias button").forEach((b) => b.onclick = () => {
+  bias = +b.dataset.v; store.set("bias", bias); paintBias(); if (state.data) render();
+});
+paintBias();
+
+let lastLoad = 0, busy = false;
+async function refresh() {
+  if (busy) return; busy = true;
+  try {
+    let name, lat, lon, tz;
+    if (sel.value === HERE) {
+      name = HERE; tz = "auto";
+      const prev = store.get("here");
+      try { [lat, lon] = await getPosition(); store.set("here", [lat, lon]); }
+      catch (e) { if (prev) [lat, lon] = prev; else { showError(e, "load"); return; } }
+    } else {
+      const c = CITIES[+sel.value] || CITIES[0];
+      [name, lat, lon] = c; tz = "Asia/Jerusalem";
+    }
+    const cached = store.get("wx:" + name);
+    if (cached && !state.data) {
+      state.data = cached.data; state.stale = true;
+      try { render(); $("#updated").textContent = "מציג נתונים שמורים…"; } catch { state.data = null; }
+    }
+    let data;
+    try { data = await load(lat, lon, tz); }
+    catch (e) {
+      if (!state.data) showError(e, "load");
+      else $("#updated").textContent = "אין חיבור. מציג נתונים מ-" + new Date(cached.at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+      return;
+    }
+    try {
+      state.data = data; state.stale = false; lastLoad = Date.now();
+      store.set("wx:" + name, { data, at: lastLoad });
+      render();
+      $("#updated").textContent = "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { console.error(e); showError(e, "render"); }
+  } finally { busy = false; }
+}
+// Refresh on open, when the app comes back to the screen after 10+ minutes, and every 30 minutes while open.
+refresh();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastLoad > 10 * 60 * 1000) refresh(); });
+setInterval(() => { if (!document.hidden) refresh(); }, 30 * 60 * 1000);
+
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
