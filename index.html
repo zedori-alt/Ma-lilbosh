@@ -7,6 +7,7 @@
 <meta name="description" content="מזג האוויר ומה ללבוש בבוקר, בצהריים ובערב">
 <meta name="theme-color" content="#F2F2F7" id="themeColor">
 <script>
+  try { document.documentElement.dataset.style = JSON.parse(localStorage.getItem("style")) || "color"; } catch { document.documentElement.dataset.style = "color"; }
   // Light from sunrise to sunset, dark at night (by the last place shown; 06:00–17:00 until we know)
   (function () { let dark; try { const t = JSON.parse(localStorage.getItem("theme")); dark = t === "dark"; } catch {}
     if (dark === undefined) { const h = new Date().getHours(); dark = h < 6 || h >= 17; }
@@ -128,6 +129,47 @@ body { overflow-x: hidden; }
 .line .badge { flex: 0 0 28px; height: 28px; }
 .badge.sign { font-size: 20px; font-weight: 600; line-height: 1; }
 .sign.plus { background: var(--indigo); } .sign.minus { background: var(--orange); } .sign.check { background: var(--green); font-size: 15px; }
+/* Mood colour by the answer: blue cold, green pleasant, peach warm.
+   "color" style tints the answer card and the top of the page; "subtle" colours only the text (and the graphs). */
+html[data-style="color"] .answer.cold { background: linear-gradient(160deg, #DCEEFF 0%, #EEF6FF 60%, #FFFFFF 100%); }
+html[data-style="color"] .answer.mild { background: linear-gradient(160deg, #DDF5E3 0%, #EFFAF1 60%, #FFFFFF 100%); }
+html[data-style="color"] .answer.warm { background: linear-gradient(160deg, #FFE3CC 0%, #FFF1E5 60%, #FFFFFF 100%); }
+html[data-style="color"] body[data-mood="cold"] { background: linear-gradient(180deg, #E3F0FD 0, var(--bg) 420px) no-repeat, var(--bg); }
+html[data-style="color"] body[data-mood="mild"] { background: linear-gradient(180deg, #E4F5E8 0, var(--bg) 420px) no-repeat, var(--bg); }
+html[data-style="color"] body[data-mood="warm"] { background: linear-gradient(180deg, #FDEBDD 0, var(--bg) 420px) no-repeat, var(--bg); }
+.answer.cold .lead, .answer.cold .big { color: #0A4A8A; }
+.answer.mild .lead, .answer.mild .big { color: #116B34; }
+.answer.warm .lead, .answer.warm .big { color: #9A3B06; }
+:root[data-theme="dark"][data-style="color"] .answer.cold { background: linear-gradient(160deg, #0F2B4A 0%, #15233A 60%, #1C1C1E 100%); }
+:root[data-theme="dark"][data-style="color"] .answer.mild { background: linear-gradient(160deg, #0F3A22 0%, #16281D 60%, #1C1C1E 100%); }
+:root[data-theme="dark"][data-style="color"] .answer.warm { background: linear-gradient(160deg, #4A230C 0%, #2E1C12 60%, #1C1C1E 100%); }
+:root[data-theme="dark"][data-style="color"] body[data-mood="cold"] { background: linear-gradient(180deg, #0B1D33 0, #000 420px) no-repeat, #000; }
+:root[data-theme="dark"][data-style="color"] body[data-mood="mild"] { background: linear-gradient(180deg, #0B2416 0, #000 420px) no-repeat, #000; }
+:root[data-theme="dark"][data-style="color"] body[data-mood="warm"] { background: linear-gradient(180deg, #2E1608 0, #000 420px) no-repeat, #000; }
+:root[data-theme="dark"] .answer.cold .lead, :root[data-theme="dark"] .answer.cold .big { color: #9FD0FF; }
+:root[data-theme="dark"] .answer.mild .lead, :root[data-theme="dark"] .answer.mild .big { color: #9BE3B2; }
+:root[data-theme="dark"] .answer.warm .lead, :root[data-theme="dark"] .answer.warm .big { color: #FFC08F; }
+body { transition: background .4s; }
+
+/* style switch, top-right corner */
+.nav { justify-content: space-between; }
+.stylebtn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--fill); color: var(--label); border-radius: 999px; padding: 5px 12px 5px 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.stylebtn .dots { display: inline-flex; gap: 2px; }
+.stylebtn .dots i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+html[data-style="subtle"] .stylebtn .dots i { background: var(--label3) !important; }
+
+/* splash */
+#splash { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; transition: opacity .35s ease, transform .35s ease; }
+#splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+#splash img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.15), 0 0 0 .5px rgba(0,0,0,.08); animation: pop .6s cubic-bezier(.2,1.4,.4,1) both; }
+#splash .name { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; animation: rise .5s .15s ease both; }
+#splash .bar { width: 120px; height: 5px; border-radius: 3px; overflow: hidden; background: var(--fill); animation: rise .5s .25s ease both; }
+#splash .bar i { display: block; height: 100%; width: 40%; border-radius: 3px; background: linear-gradient(90deg, #5E5CE6, #FF5E7A, #FF9F0A); animation: slide 1s .3s ease-in-out infinite alternate; }
+@keyframes pop { from { transform: scale(.6) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(-150%); } }
+@media (prefers-reduced-motion: reduce) { #splash * { animation: none !important; } }
+
 /* hourly chart */
 .chart { overflow-x: auto; padding: 12px 4px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; direction: rtl; }
 .chart::-webkit-scrollbar { display: none; }
@@ -156,8 +198,10 @@ details.more[open] > summary { color: var(--label2); }
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><img src="icons/icon-192.png" alt=""><div class="name">מה ללבוש</div><div class="bar"><i></i></div></div>
 <div class="wrap">
   <div class="nav">
+    <button class="stylebtn" id="styleBtn" aria-label="סגנון צבעים"><span class="dots"><i style="background:#4DA3FF"></i><i style="background:#34C759"></i><i style="background:#FF9F5A"></i></span><span id="styleName">צבעוני</span></button>
     <label class="loc" id="locBtn">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M14.6 1.4c.3.3.4.7.2 1.1l-5.3 11.9c-.4.9-1.7.8-1.9-.2L6.6 9.4 1.8 8.4c-1-.2-1.1-1.5-.2-1.9L13.5 1.2c.4-.2.8-.1 1.1.2z"/></svg>
       <span id="locName">מיקום</span>
@@ -446,6 +490,7 @@ function render() {
 
   // the answer
   const ans = el("div", "answer");
+  if (p) { const L = level(p.tOut), mood = L <= 1 ? "cold" : L <= 3 ? "mild" : "warm"; ans.classList.add(mood); document.body.dataset.mood = mood; }
   if (!p) { ans.append(el("div", "big", "אין עדיין תחזית לשעות האלה.")); app.append(ans); return; }
   ans.append(el("div", "lead", outNow ? "עכשיו בחוץ" : dayOffset ? "מחר, לצאת עם" : "לצאת עם"));
   ans.append(el("div", "big", p.text));
@@ -592,6 +637,20 @@ async function refresh() {
     } catch (e) { console.error(e); showError(e, "render"); }
   } finally { busy = false; }
 }
+// Style switch: colourful (default) <-> subtle
+function paintStyle() { $("#styleName").textContent = document.documentElement.dataset.style === "subtle" ? "עדין" : "צבעוני"; }
+$("#styleBtn").onclick = () => { const st = document.documentElement.dataset.style === "subtle" ? "color" : "subtle"; document.documentElement.dataset.style = st; store.set("style", st); paintStyle(); };
+paintStyle();
+
+// Splash: at least 1.2 s, gone as soon as the first answer is on screen (at most 4 s)
+const splashStart = Date.now();
+function hideSplash() {
+  const sp = $("#splash"); if (!sp || sp.classList.contains("out")) return;
+  setTimeout(() => { sp.classList.add("out"); setTimeout(() => sp.remove(), 400); }, Math.max(0, 1200 - (Date.now() - splashStart)));
+}
+setTimeout(hideSplash, 4000);
+const firstPaint = setInterval(() => { if (document.querySelector(".answer, .msg button")) { clearInterval(firstPaint); hideSplash(); } }, 100);
+
 refresh();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastLoad > 10 * 60 * 1000) refresh(); });
 setInterval(() => { if (!document.hidden) refresh(); }, 30 * 60 * 1000);
