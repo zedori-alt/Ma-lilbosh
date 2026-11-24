@@ -1,5 +1,5 @@
 // Keeps the app itself available offline. Weather data is not cached here; the page keeps the last forecast itself.
-const VERSION = "ma-lilbosh-v5";
+const VERSION = "ma-lilbosh-v6";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
