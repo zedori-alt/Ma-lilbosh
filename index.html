@@ -97,6 +97,41 @@ svg.i { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em;
 .track { height: 5px; border-radius: 3px; background: var(--fill); position: relative; }
 .track span { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
 
+/* now line */
+.now { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--label2); margin-top: 6px; }
+.now svg { width: 20px; height: 20px; flex: 0 0 20px; }
+/* leave / return */
+.when { display: flex; gap: 8px; align-items: stretch; margin-top: 16px; }
+.tbox { flex: 1; background: var(--card); border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; }
+.tbox .tl { font-size: 12px; color: var(--label2); }
+.tbox input { border: 0; background: transparent; font: inherit; font-size: 24px; font-weight: 600; color: var(--label); padding: 0; width: 100%; font-variant-numeric: tabular-nums; -webkit-appearance: none; appearance: none; text-align: right; min-height: 32px; }
+.now .nowt { flex: 1; min-width: 0; }
+.now .seg { flex: 0 0 auto; }
+.tbox { min-width: 0; }
+.tbox input::-webkit-calendar-picker-indicator { display: none; }
+body { overflow-x: hidden; }
+/* the answer */
+.answer { background: var(--card); border-radius: 20px; padding: 20px 18px 16px; margin-top: 14px; }
+.answer .lead { font-size: 14px; color: var(--label2); }
+.answer .big { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; margin-top: 2px; }
+.answer .feel { font-size: 15px; color: var(--label2); margin-top: 6px; }
+.strip { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 16px; gap: 1px; }
+.strip i { flex: 1; }
+.ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--label2); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.lines { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.line { display: flex; gap: 12px; align-items: center; font-size: 16px; }
+.line .badge { flex: 0 0 28px; height: 28px; }
+.badge.sign { font-size: 20px; font-weight: 600; line-height: 1; }
+.sign.plus { background: var(--indigo); } .sign.minus { background: var(--orange); } .sign.check { background: var(--green); font-size: 15px; }
+/* folded details */
+details.more { margin-top: 18px; }
+details.more > summary { list-style: none; text-align: center; color: var(--accent); font-size: 15px; padding: 10px; cursor: pointer; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more[open] > summary { color: var(--label2); }
+.wk { display: grid; grid-template-columns: 52px 30px 1fr auto; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; font-variant-numeric: tabular-nums; }
+.wk + .wk::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: .5px; background: var(--sep); }
+.wk .ic svg { width: 22px; height: 22px; display: block; margin: auto; }
+.wk .rp { font-size: 13px; color: var(--blue); }
 .msg { text-align: center; color: var(--label2); padding: 80px 20px; }
 .msg button { margin-top: 14px; border: 0; background: var(--fill); color: var(--accent); border-radius: 10px; padding: 8px 18px; }
 .foot { text-align: center; font-size: 12px; color: var(--label3); margin-top: 22px; }
@@ -116,7 +151,7 @@ svg.i { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em;
 
   <div id="app"><div class="msg">טוען…</div></div>
 
-  <div class="sec">
+  <div class="sec" id="prefs" style="margin-top:20px">
     <div class="sec-h"><span>התאמה אישית</span></div>
     <div class="card">
       <div class="row plain">
@@ -283,99 +318,157 @@ function getPosition() {
 }
 
 // ---------- render ----------
-let state = { data: null, tab: 0, stale: false, place: "" };
+const PREFS = $("#prefs"); PREFS.remove();
+let state = { data: null, tab: null, stale: false, place: "" }; // tab: null = automatic (tomorrow once you are back)
+// Leave/return times, saved on the phone. Default: out 08:00–19:00.
+let span = store.get("span") || { out: "08:00", back: "19:00" };
+const hh = (s) => +s.slice(0, 2);
+// What to add on top at each level (index into LEVELS)
+const LAYER = ["מעיל חם", "ג'קט", "סווטשרט", null, null, null];
 
 function section(title, extra) {
   const s = el("div", "sec"), h = el("div", "sec-h");
   h.append(el("span", null, title)); if (extra) h.append(extra);
   const c = el("div", "card"); s.append(h, c); return [s, c];
 }
-function row(badgeKey, t1, t2, val, cls) {
-  const rw = el("div", "row" + (cls ? " " + cls : ""));
-  if (badgeKey) rw.append(badge(badgeKey));
-  const m = el("div", "main"); m.append(el("div", "t1", t1)); if (t2) m.append(el("div", "t2", t2));
-  rw.append(m); if (val != null) rw.append(el("div", "val", val));
-  return rw;
+
+// Plan the outfit for the hours you are out. Returns the big sentence and the extra lines.
+function plan(data, startIdx, endIdx) {
+  const H = data.hourly, d = data.daily;
+  const cold = (k) => Math.min(H.apparent_temperature[k], H.temperature_2m[k]);
+  const ks = []; for (let k = startIdx; k <= endIdx && k < H.time.length; k++) ks.push(k);
+  if (!ks.length) return null;
+  const head = ks.slice(0, 2), tail = ks.slice(-2);
+  const tOut = Math.min(...head.map(cold));
+  const tBack = Math.min(...tail.map(cold));
+  let kWarm = ks[0]; ks.forEach((k) => { if (H.apparent_temperature[k] > H.apparent_temperature[kWarm]) kWarm = k; });
+  const tWarm = H.apparent_temperature[kWarm];
+  const lOut = level(tOut), lBack = level(tBack), lWarm = level(tWarm);
+  const lines = [];
+  if (lWarm > lOut && LAYER[lOut] && lWarm >= 3) lines.push(["minus", `ב-${H.time[kWarm].slice(11, 16)} יהיה ${r(tWarm)}°, אפשר להוריד את ה${LAYER[lOut]}.`]);
+  else if (lWarm >= lOut + 2) lines.push(["minus", `ב-${H.time[kWarm].slice(11, 16)} יהיה ${r(tWarm)}°, הרבה יותר חם.`]);
+  if (lBack < lOut && LAYER[lBack]) lines.push(["plus", `לקחת ${LAYER[lBack]} לחזרה (${r(tBack)}°).`]);
+  const rain = Math.max(...ks.map((k) => H.precipitation_probability[k] ?? 0));
+  if (rain >= 60) lines.push(["umbrella", `לקחת מטרייה, סיכוי לגשם ${rain}%.`]);
+  else if (rain >= 30) lines.push(["umbrella", `אולי ירד גשם (${rain}%). מטרייה קטנה בתיק.`]);
+  const dayIdx = d.time.indexOf(H.time[ks[0]].slice(0, 10));
+  const uv = d.uv_index_max[dayIdx] ?? 0, wind = Math.max(...ks.map((k) => H.wind_speed_10m[k] ?? 0));
+  const outInDay = ks.some((k) => { const h = +H.time[k].slice(11, 13); return h >= 10 && h <= 15; });
+  if (outInDay && uv >= 6) lines.push(["uv", `קרם הגנה, השמש חזקה (UV ${r(uv)}).`]);
+  if (wind >= 30) lines.push(["wind", `רוח חזקה, עד ${r(wind)} קמ״ש. משהו שעוצר רוח.`]);
+  if (adj(tWarm) >= 30) lines.push(["water", "חם מאוד, לשתות הרבה מים."]);
+  if (!lines.length) lines.push(["check", "זהו. אותו דבר כל הזמן שאתה בחוץ."]);
+  // temperature strip across the hours out
+  const strip = ks.map((k) => ({ t: H.apparent_temperature[k], h: H.time[k].slice(11, 13) }));
+  return { text: LEVELS[lOut].text, tOut, lines, strip };
+}
+
+function timeInput(label, key) {
+  const box = el("label", "tbox");
+  box.append(el("span", "tl", label));
+  const inp = el("input"); inp.type = "time"; inp.step = 1800; inp.value = span[key];
+  inp.onchange = () => { if (!inp.value) return; span[key] = inp.value; store.set("span", span); render(); };
+  box.append(inp);
+  return box;
 }
 
 function render() {
   const data = state.data, app = $("#app");
   const tz = data.timezone, H = data.hourly, d = data.daily;
-  const today = d.time.indexOf(localDate(tz));
+  const todayStr = localDate(tz), today = d.time.indexOf(todayStr);
   if (today < 0) throw new Error("הנתונים השמורים ישנים מדי");
   app.textContent = "";
 
-  // Now: from "current", or this hour of the hourly forecast when showing old saved data
   let c = data.current;
-  if (state.stale) {
-    const k = H.time.indexOf(localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0") + ":00");
-    if (k >= 0) c = { temperature_2m: H.temperature_2m[k], apparent_temperature: H.apparent_temperature[k], weather_code: H.weather_code[k], wind_speed_10m: H.wind_speed_10m[k], is_day: H.is_day[k] };
-  }
-  const hero = el("div", "hero");
-  hero.append(el("div", "city", state.place), el("div", "temp", r(c.temperature_2m) + "°"), el("div", "cond", skyText(c.weather_code)),
-              el("div", "hl", `מקס׳ ${r(d.temperature_2m_max[today])}°  מינ׳ ${r(d.temperature_2m_min[today])}°`));
-  const extra = [`מרגיש כמו ${r(c.apparent_temperature)}°`, `רוח ${r(c.wind_speed_10m)} קמ״ש`];
-  if (c.relative_humidity_2m != null) extra.push(`לחות ${r(c.relative_humidity_2m)}%`);
-  hero.append(el("div", "sum", extra.join("  ·  ")));
-  app.append(hero);
+  const nowIdx = H.time.indexOf(todayStr + "T" + String(localHour(tz)).padStart(2, "0") + ":00");
+  if (state.stale && nowIdx >= 0) c = { temperature_2m: H.temperature_2m[nowIdx], apparent_temperature: H.apparent_temperature[nowIdx], weather_code: H.weather_code[nowIdx], is_day: H.is_day[nowIdx], wind_speed_10m: H.wind_speed_10m[nowIdx] };
 
-  // What to wear: morning / noon / evening, for today or tomorrow
+  // Which outing: today, or tomorrow once you are already back (or if picked)
+  const hourNow = localHour(tz);
+  const o = hh(span.out), b = hh(span.back), dur = ((b - o + 24) % 24) || 24;
+  const autoTomorrow = o + dur <= 24 && hourNow >= o + dur;
+  const dayOffset = state.tab === 1 ? 1 : state.tab === 0 ? 0 : (autoTomorrow ? 1 : 0);
+  const date = d.time[today + dayOffset];
+  let startIdx = H.time.indexOf(date + "T" + span.out.slice(0, 2) + ":00");
+  let endIdx = startIdx + dur;
+  const outNow = dayOffset === 0 && nowIdx > startIdx && nowIdx < endIdx;
+  if (outNow) startIdx = nowIdx;
+  const p = plan(data, startIdx, endIdx);
+
+  // top line: now
+  const top = el("div", "now");
+  top.append(svg(glyph(c.weather_code, c.is_day)), el("span", "nowt", `${state.place} · עכשיו ${r(c.temperature_2m)}°, ${skyText(c.weather_code)}`));
+  app.append(top);
+
+  // when
+  const when = el("div", "when");
   const seg = el("div", "seg");
-  ["היום", "מחר"].forEach((n, i) => { const b = el("button", null, n); b.setAttribute("aria-pressed", state.tab === i); b.onclick = () => { state.tab = i; render(); }; seg.append(b); });
-  const [wearSec, wear] = section("מה ללבוש", seg);
-  const di = today + state.tab, date = d.time[di];
-  const isToday = state.tab === 0, hourNow = localHour(tz);
-  WEAR_PARTS.forEach(([name, key, from, to, mode]) => {
-    const t = partTemp(data, date, from, to, mode);
-    if (t == null) return;
-    const L = LEVELS[level(t)];
-    wear.append(row(key, L.text, `${name} · ${feelWord(t)}`, r(t) + "°", isToday && hourNow > to ? "past" : ""));
+  [["היום", 0], ["מחר", 1]].forEach(([n, i]) => {
+    const btn = el("button", null, n);
+    btn.setAttribute("aria-pressed", dayOffset === i);
+    btn.onclick = () => { state.tab = i; render(); };
+    seg.append(btn);
   });
-  // Extra notes for the day
-  const rain = d.precipitation_probability_max[di] ?? 0, uv = d.uv_index_max[di] ?? 0, wind = d.wind_speed_10m_max[di] ?? 0;
-  const noonT = partTemp(data, date, 11, 16, "avg") ?? 0;
-  if (rain >= 30) wear.append(row("umbrella", rain >= 60 ? "לקחת מטרייה" : "כדאי מטרייה קטנה בתיק", `סיכוי לגשם ${rain}%`));
-  if (uv >= 6) wear.append(row("uv", "קרם הגנה וכובע", `קרינה חזקה, UV ${r(uv)}`));
-  else if (uv >= 3 && adj(noonT) >= 23) wear.append(row("uv", "קרם הגנה אם תהיו בחוץ", `קרינה בינונית, UV ${r(uv)}`));
-  if (wind >= 30) wear.append(row("wind", "משהו שעוצר רוח", `רוח עד ${r(wind)} קמ״ש`));
-  if (adj(noonT) >= 30) wear.append(row("water", "לשתות הרבה מים", "חם מאוד בצהריים"));
-  app.append(wearSec);
+  when.append(timeInput("יוצא", "out"), timeInput("חוזר", "back"));
+  top.append(seg);
+  app.append(when);
 
-  // Hourly, starting at the current hour
-  const [hourSec, hourCard] = section(`תחזית שעתית · זריחה ${d.sunrise[today].slice(11, 16)} · שקיעה ${d.sunset[today].slice(11, 16)}`);
-  const strip = el("div", "hours");
-  const nowKey = localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0");
-  let start = H.time.findIndex((t) => t.slice(0, 13) >= nowKey); if (start < 0) start = 0;
-  for (let k = start; k < Math.min(start + 24, H.time.length); k++) {
+  // the answer
+  const ans = el("div", "answer");
+  if (!p) { ans.append(el("div", "big", "אין עדיין תחזית לשעות האלה.")); app.append(ans); return; }
+  ans.append(el("div", "lead", outNow ? "עכשיו בחוץ" : dayOffset ? "מחר, לצאת עם" : "לצאת עם"));
+  ans.append(el("div", "big", p.text));
+  ans.append(el("div", "feel", `מרגיש כמו ${r(p.tOut)}° ${outNow ? "עכשיו" : "כשאתה יוצא"}`));
+  const strip = el("div", "strip");
+  p.strip.forEach((s) => { const i = el("i"); i.style.background = tempColor(s.t); strip.append(i); });
+  ans.append(strip);
+  const ticks = el("div", "ticks");
+  const n = p.strip.length, mid = p.strip[Math.floor((n - 1) / 2)], last = p.strip[n - 1];
+  [p.strip[0], mid, last].forEach((s) => ticks.append(el("span", null, `${s.h}:00 · ${r(s.t)}°`)));
+  ans.append(ticks);
+  const list = el("div", "lines");
+  p.lines.forEach(([k, t]) => {
+    const rw = el("div", "line");
+    rw.append(k === "plus" || k === "minus" || k === "check" ? sign(k) : badge(k), el("span", null, t));
+    list.append(rw);
+  });
+  ans.append(list);
+  app.append(ans);
+
+  // weather details, folded away
+  const det = el("details", "more");
+  det.open = !!state.detailsOpen;
+  det.ontoggle = () => { state.detailsOpen = det.open; };
+  det.append(el("summary", null, "פרטי מזג אוויר"));
+  const [hourSec, hourCard] = section(`שעה שעה · זריחה ${d.sunrise[today].slice(11, 16)} · שקיעה ${d.sunset[today].slice(11, 16)}`);
+  const hours = el("div", "hours");
+  const st = nowIdx >= 0 ? nowIdx : 0;
+  for (let k = st; k < Math.min(st + 24, H.time.length); k++) {
     const hr = el("div", "hour"), ic = el("div", "ic");
     ic.append(svg(glyph(H.weather_code[k], H.is_day[k])));
-    const p = H.precipitation_probability[k] ?? 0;
-    if (p >= 20) ic.append(el("div", "p", p + "%"));
-    hr.append(el("div", "h", k === start ? "עכשיו" : H.time[k].slice(11, 13)), ic, el("div", "tt", r(H.temperature_2m[k]) + "°"));
-    strip.append(hr);
+    const pp = H.precipitation_probability[k] ?? 0; if (pp >= 20) ic.append(el("div", "p", pp + "%"));
+    hr.append(el("div", "h", k === st ? "עכשיו" : H.time[k].slice(11, 13)), ic, el("div", "tt", r(H.temperature_2m[k]) + "°"));
+    hours.append(hr);
   }
-  hourCard.append(strip);
-  app.append(hourSec);
-
-  // 7 days from today
-  const [weekSec, week] = section("7 ימים");
+  hourCard.append(hours);
+  const [weekSec, week] = section("השבוע");
   const idxs = []; for (let i = today; i < Math.min(today + 7, d.time.length); i++) idxs.push(i);
-  const lo = Math.min(...idxs.map((i) => d.temperature_2m_min[i])), hi = Math.max(...idxs.map((i) => d.temperature_2m_max[i])), span = hi - lo || 1;
   const dayName = new Intl.DateTimeFormat("he-IL", { weekday: "short", timeZone: "UTC" });
-  idxs.forEach((i, n) => {
-    const rw = el("div", "day");
-    const name = n === 0 ? "היום" : dayName.format(new Date(d.time[i] + "T12:00:00Z")).replace("יום ", "");
+  idxs.forEach((i, j) => {
+    const rw = el("div", "wk");
     const ic = el("div", "ic"); ic.append(svg(glyph(d.weather_code[i])));
-    const p = d.precipitation_probability_max[i] ?? 0; if (p >= 30) ic.append(el("small", null, p + "%"));
-    const tr = el("div", "track"), bar = el("span");
-    bar.style.right = ((d.temperature_2m_min[i] - lo) / span) * 100 + "%";
-    bar.style.width = Math.max(6, ((d.temperature_2m_max[i] - d.temperature_2m_min[i]) / span) * 100) + "%";
-    bar.style.background = `linear-gradient(to left, ${tempColor(d.temperature_2m_min[i])}, ${tempColor(d.temperature_2m_max[i])})`;
-    tr.append(bar);
-    rw.append(el("div", "dn", name), ic, el("div", "lo", r(d.temperature_2m_min[i]) + "°"), tr, el("div", "hi", r(d.temperature_2m_max[i]) + "°"));
+    const pp = d.precipitation_probability_max[i] ?? 0;
+    rw.append(el("div", "dn", j === 0 ? "היום" : dayName.format(new Date(d.time[i] + "T12:00:00Z")).replace("יום ", "")), ic,
+              el("div", "rg", `${r(d.temperature_2m_min[i])}°–${r(d.temperature_2m_max[i])}°`), el("div", "rp", pp >= 30 ? `גשם ${pp}%` : ""));
     week.append(rw);
   });
-  app.append(weekSec);
+  det.append(hourSec, weekSec, PREFS);
+  app.append(det);
+}
+function sign(k) {
+  const b = el("div", "badge sign " + k);
+  b.textContent = k === "plus" ? "+" : k === "minus" ? "−" : "✓";
+  return b;
 }
 
 function showError(err, kind) {
@@ -393,7 +486,7 @@ CITIES.forEach((c, i) => sel.add(new Option(c[0], i)));
 const savedCity = store.get("city");
 sel.value = savedCity == null ? HERE : String(savedCity);
 if (sel.selectedIndex < 0) sel.value = HERE;
-sel.onchange = () => { store.set("city", sel.value); state.tab = 0; state.data = null; refresh(); };
+sel.onchange = () => { store.set("city", sel.value); state.tab = null; state.data = null; refresh(); };
 
 function paintBias() { document.querySelectorAll("#bias button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === bias)); }
 document.querySelectorAll("#bias button").forEach((b) => b.onclick = () => { bias = +b.dataset.v; store.set("bias", bias); paintBias(); if (state.data) render(); });
