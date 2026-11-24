@@ -170,6 +170,20 @@ html[data-style="subtle"] .stylebtn .dots i { background: var(--label3) !importa
 @keyframes slide { from { transform: translateX(0); } to { transform: translateX(-150%); } }
 @media (prefers-reduced-motion: reduce) { #splash * { animation: none !important; } }
 
+.greet { font-size: 28px; font-weight: 700; color: var(--label); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 2px; }
+.vibe { margin-top: 14px; padding-top: 12px; border-top: .5px solid var(--sep); font-size: 15px; color: var(--label2); }
+/* evening check-in */
+.check { background: var(--card); border-radius: 18px; padding: 14px 16px; margin-top: 14px; box-shadow: 0 0 0 1px rgba(88,86,214,.18) inset; }
+.check .tag { font-size: 13px; font-weight: 600; color: var(--indigo); }
+.check .q { font-size: 17px; font-weight: 600; margin-top: 3px; }
+.check .btns { display: flex; gap: 8px; margin-top: 12px; }
+.check .btns button { flex: 1; border: 0; background: var(--fill); border-radius: 12px; padding: 10px 0; font-size: 15px; font-weight: 600; cursor: pointer; }
+.check .btns button:active { background: var(--indigo); color: #fff; }
+.check .skip { border: 0; background: none; color: var(--label2); font-size: 13px; margin-top: 8px; padding: 2px 0; cursor: pointer; }
+.check.done .q { color: var(--indigo); font-weight: 500; font-size: 15px; margin: 0; }
+.row.learn[hidden] { display: none; }
+.row.learn { font-size: 14px; color: var(--label2); display: block; }
+.row.learn .reset { border: 0; background: none; color: var(--accent); font-size: 14px; padding: 0; cursor: pointer; }
 /* hourly chart */
 .chart { overflow-x: auto; padding: 12px 4px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; direction: rtl; }
 .chart::-webkit-scrollbar { display: none; }
@@ -221,6 +235,7 @@ details.more[open] > summary { color: var(--label2); }
           <button data-v="-3">קר מהר</button><button data-v="0">רגיל</button><button data-v="3">חם מהר</button>
         </div>
       </div>
+      <div class="row plain learn" id="learnNote" hidden></div>
     </div>
   </div>
 
@@ -313,7 +328,7 @@ const badge = (k) => { const b = el("div", "badge"); b.style.background = B[k][0
 // ---------- clothing ----------
 // Personal bias: "I get cold fast" shifts every reading down 3°, "I get hot fast" up.
 let bias = +(store.get("bias") ?? 0);
-const adj = (t) => t + bias;
+const adj = (t) => t + bias + learn; // learn is set further down, before anything renders
 // General categories only, by feels-like temperature (tuned for Israelis: 20° in the morning is not short-sleeve weather)
 const LEVELS = [
   { max: 11, text: "ארוך ומעיל חם" },
@@ -378,6 +393,35 @@ function getPosition() {
   });
 }
 
+// A small line with the feel of the day; one is picked per date so it stays the same all day
+const VIBES = {
+  rain: ["יום של שמיכה ותה.", "יום טוב לקפה ליד החלון.", "גשם בחוץ. יום טוב לספר טוב.", "יום שבו מטרייה היא החברה הכי טובה."],
+  cold: ["יום לקפה חם ולשכבות.", "קר באמת. שווה להתעטף טוב.", "יום של מרק ושמיכה בערב.", "יום שבו צעיף לא יזיק."],
+  cool: ["יום נעים להליכה, רק להתלבש טוב.", "אוויר צלול, יום טוב לטיול קצר.", "קריר ונעים. יום טוב לצאת.", "יום של סווטשרט אהוב."],
+  nice: ["יום מושלם לצאת החוצה.", "מזג אוויר כמו שצריך. ליהנות.", "יום טוב לשבת בחוץ עם קפה.", "יום שאי אפשר להתלונן עליו."],
+  warm: ["יום של שמש וגלידה.", "יום טוב לים או לפארק.", "חמים ונעים. יום קיצי.", "יום לשתות משהו קר בחוץ."],
+  hot: ["יום לחפש צל, ים או מזגן.", "חם מאוד. עדיף להישאר בצל בצהריים.", "יום של מים קרים ומזגן.", "יום טוב לים, רק לא בצהריים."]
+};
+
+// ---------- learning: "how was it?" ----------
+// Each answer moves your personal adjustment by 1° (at most ±4°). Kept on the phone only.
+let learn = +(store.get("learn") ?? 0);
+function answerCheck(date, v) {
+  if (v === "cold") learn = Math.max(-4, learn - 1);
+  if (v === "hot") learn = Math.min(4, learn + 1);
+  store.set("learn", learn);
+  store.set("checked", { date, v });
+  state.justAnswered = v;
+  render();
+}
+function learnText() {
+  if (learn <= -2) return "למדתי שקר לך יותר מלרוב האנשים, אז אני ממליץ לך קצת יותר חם.";
+  if (learn === -1) return "למדתי שקר לך קצת יותר מלרוב האנשים.";
+  if (learn >= 2) return "למדתי שחם לך יותר מלרוב האנשים, אז אני ממליץ לך קצת יותר קליל.";
+  if (learn === 1) return "למדתי שחם לך קצת יותר מלרוב האנשים.";
+  return "";
+}
+
 // ---------- render ----------
 const PREFS = $("#prefs"); PREFS.remove();
 let state = { data: null, tab: null, stale: false, place: "" }; // tab: null = automatic (tomorrow once you are back)
@@ -406,22 +450,26 @@ function plan(data, startIdx, endIdx) {
   const tWarm = H.apparent_temperature[kWarm];
   const lOut = level(tOut), lBack = level(tBack), lWarm = level(tWarm);
   const lines = [];
-  if (lWarm > lOut && LAYER[lOut] && lWarm >= 3) lines.push(["minus", `ב-${H.time[kWarm].slice(11, 16)} יהיה ${r(tWarm)}°, אפשר להוריד את ה${LAYER[lOut]}.`]);
-  else if (lWarm >= lOut + 2) lines.push(["minus", `ב-${H.time[kWarm].slice(11, 16)} יהיה ${r(tWarm)}°, הרבה יותר חם.`]);
-  if (lBack < lOut && LAYER[lBack]) lines.push(["plus", `לקחת ${LAYER[lBack]} לחזרה (${r(tBack)}°).`]);
+  if (lWarm > lOut && LAYER[lOut] && lWarm >= 3) lines.push(["minus", `בצהריים מתחמם ל-${r(tWarm)}°, אפשר להוריד את ה${LAYER[lOut]}.`]);
+  else if (lWarm >= lOut + 2) lines.push(["minus", `בצהריים נהיה הרבה יותר חם, ${r(tWarm)}°.`]);
+  if (lBack < lOut && LAYER[lBack]) lines.push(["plus", `בערב מתקרר (${r(tBack)}°), כדאי לקחת ${LAYER[lBack]} לחזרה.`]);
   const rain = Math.max(...ks.map((k) => H.precipitation_probability[k] ?? 0));
-  if (rain >= 60) lines.push(["umbrella", `לקחת מטרייה, סיכוי לגשם ${rain}%.`]);
-  else if (rain >= 30) lines.push(["umbrella", `אולי ירד גשם (${rain}%). מטרייה קטנה בתיק.`]);
+  if (rain >= 60) lines.push(["umbrella", `לא לשכוח מטרייה, כנראה יירד גשם (${rain}%).`]);
+  else if (rain >= 30) lines.push(["umbrella", `אולי יטפטף (${rain}%), מטרייה קטנה בתיק לא תזיק.`]);
   const dayIdx = d.time.indexOf(H.time[ks[0]].slice(0, 10));
   const uv = d.uv_index_max[dayIdx] ?? 0, wind = Math.max(...ks.map((k) => H.wind_speed_10m[k] ?? 0));
   const outInDay = ks.some((k) => { const h = +H.time[k].slice(11, 13); return h >= 10 && h <= 15; });
-  if (outInDay && uv >= 6) lines.push(["uv", `קרם הגנה, השמש חזקה (UV ${r(uv)}).`]);
+  if (outInDay && uv >= 6) lines.push(["uv", `השמש חזקה היום, כדאי קרם הגנה.`]);
   if (wind >= 30) lines.push(["wind", `רוח חזקה, עד ${r(wind)} קמ״ש. משהו שעוצר רוח.`]);
   if (adj(tWarm) >= 30) lines.push(["water", "חם מאוד, לשתות הרבה מים."]);
-  if (!lines.length) lines.push(["check", "זהו. אותו דבר כל הזמן שאתה בחוץ."]);
+  if (!lines.length) lines.push(["check", "זהו, לא צריך שום דבר נוסף."]);
   // temperature strip across the hours out
   const strip = ks.map((k) => ({ t: H.apparent_temperature[k], h: H.time[k].slice(11, 13) }));
-  return { text: LEVELS[lOut].text, tOut, lines, strip };
+  // a small line with the feel of the day
+  const kind = rain >= 60 ? "rain" : lOut <= 0 ? "cold" : lOut <= 2 ? "cool" : lOut === 3 ? "nice" : adj(tWarm) >= 30 ? "hot" : "warm";
+  const pool = VIBES[kind], seed = +H.time[ks[0]].slice(0, 10).replace(/-/g, "");
+  const vibe = pool[seed % pool.length];
+  return { text: LEVELS[lOut].text, tOut, lines, strip, vibe };
 }
 
 function timeInput(label, key) {
@@ -472,7 +520,10 @@ function render() {
 
   // top line: now
   const top = el("div", "now");
-  top.append(svg(glyph(c.weather_code, c.is_day)), el("span", "nowt", `${state.place} · עכשיו ${r(c.temperature_2m)}°, ${skyText(c.weather_code)}`));
+  const g = hourNow < 5 ? "לילה טוב" : hourNow < 12 ? "בוקר טוב" : hourNow < 17 ? "צהריים טובים" : hourNow < 21 ? "ערב טוב" : "לילה טוב";
+  const gt = el("span", "nowt");
+  gt.append(el("div", "greet", g), el("div", null, `ב${state.place} עכשיו ${r(c.temperature_2m)}°, ${skyText(c.weather_code)}`));
+  top.append(gt);
   app.append(top);
 
   // when
@@ -484,17 +535,39 @@ function render() {
     btn.onclick = () => { state.tab = i; render(); };
     seg.append(btn);
   });
-  when.append(timeInput("יוצא", "out"), timeInput("חוזר", "back"));
+  when.append(timeInput("יציאה", "out"), timeInput("חזרה", "back"));
   top.append(seg);
   app.append(when);
+
+  // Evening check-in: after today's return time (or from 18:00), once a day, one tap, can be skipped
+  const todayStart = H.time.indexOf(todayStr + "T" + span.out.slice(0, 2) + ":00");
+  const checked = store.get("checked");
+  const backed = o + dur <= 24 ? hourNow >= o + dur : hourNow >= 18;
+  if (state.justAnswered && checked && checked.date === todayStr) {
+    const ok = el("div", "check done");
+    ok.append(el("div", "q", state.justAnswered === "ok" ? "מעולה, ממשיכים ככה." : state.justAnswered === "cold" ? "הבנתי. מעכשיו אמליץ לך קצת יותר חם." : "הבנתי. מעכשיו אמליץ לך קצת יותר קליל."));
+    app.append(ok);
+  } else if (backed && todayStart >= 0 && (!checked || checked.date !== todayStr)) {
+    const tp = plan(data, todayStart, todayStart + dur);
+    if (tp) {
+      const box = el("div", "check");
+      box.append(el("div", "tag", "שאלה קטנה"), el("div", "q", `היום ההמלצה הייתה ${tp.text}. איך היה?`));
+      const btns = el("div", "btns");
+      [["היה לי קר", "cold"], ["בדיוק", "ok"], ["היה לי חם", "hot"]].forEach(([t, v]) => { const bt = el("button", null, t); bt.onclick = () => answerCheck(todayStr, v); btns.append(bt); });
+      const skip = el("button", "skip", "לא היום");
+      skip.onclick = () => { store.set("checked", { date: todayStr, v: "skip" }); render(); };
+      box.append(btns, skip);
+      app.append(box);
+    }
+  }
 
   // the answer
   const ans = el("div", "answer");
   if (p) { const L = level(p.tOut), mood = L <= 1 ? "cold" : L <= 3 ? "mild" : "warm"; ans.classList.add(mood); document.body.dataset.mood = mood; }
   if (!p) { ans.append(el("div", "big", "אין עדיין תחזית לשעות האלה.")); app.append(ans); return; }
-  ans.append(el("div", "lead", outNow ? "עכשיו בחוץ" : dayOffset ? "מחר, לצאת עם" : "לצאת עם"));
+  ans.append(el("div", "lead", outNow ? "מה כדאי ללבוש עכשיו" : dayOffset ? "למחר, כדאי לצאת עם" : "היום כדאי לצאת עם"));
   ans.append(el("div", "big", p.text));
-  ans.append(el("div", "feel", `מרגיש כמו ${r(p.tOut)}° ${outNow ? "עכשיו" : "כשאתה יוצא"}`));
+  ans.append(el("div", "feel", `מרגיש כמו ${r(p.tOut)}° ${outNow ? "עכשיו" : "ביציאה"}`));
   const strip = el("div", "strip");
   p.strip.forEach((s) => { const i = el("i"); i.style.background = tempColor(s.t); strip.append(i); });
   ans.append(strip);
@@ -509,6 +582,7 @@ function render() {
     list.append(rw);
   });
   ans.append(list);
+  ans.append(el("div", "vibe", p.vibe));
   app.append(ans);
 
   // Weather details, always shown under the answer
@@ -532,6 +606,9 @@ function render() {
               el("div", "lo", r(d.temperature_2m_min[i]) + "°"), tr, el("div", "hi", r(d.temperature_2m_max[i]) + "°"));
     week.append(rw);
   });
+  const lt = learnText(), slot = PREFS.querySelector("#learnNote");
+  slot.textContent = ""; slot.hidden = !lt;
+  if (lt) { slot.append(el("span", null, lt + " ")); const rs = el("button", "reset", "לאפס"); rs.onclick = () => { learn = 0; store.set("learn", 0); render(); }; slot.append(rs); }
   app.append(hourSec, weekSec, PREFS);
 }
 
