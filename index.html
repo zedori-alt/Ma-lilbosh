@@ -20,13 +20,13 @@
   --bg: #F2F2F7; --card: #FFFFFF; --label: #000000; --label2: rgba(60,60,67,.6); --label3: rgba(60,60,67,.3);
   --sep: rgba(60,60,67,.18); --fill: rgba(118,118,128,.12); --seg-on: #FFFFFF; --accent: #007AFF;
   --blue: #007AFF; --orange: #FF9500; --yellow: #FFCC00; --indigo: #5856D6; --teal: #30B0C7; --red: #FF3B30; --green: #34C759;
-  --cloud: #AEAEB2;
+  --cloud: #9FB3CC;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Hebrew", system-ui, "Segoe UI", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #000000; --card: #1C1C1E; --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3);
           --sep: rgba(84,84,88,.6); --fill: rgba(118,118,128,.24); --seg-on: #636366; --accent: #0A84FF;
-          --blue: #0A84FF; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6; --teal: #40C8E0; --cloud: #8E8E93; color-scheme: dark; }
+          --blue: #0A84FF; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6; --teal: #40C8E0; --cloud: #8FA3BD; color-scheme: dark; }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -123,12 +123,24 @@ body { overflow-x: hidden; }
 .line .badge { flex: 0 0 28px; height: 28px; }
 .badge.sign { font-size: 20px; font-weight: 600; line-height: 1; }
 .sign.plus { background: var(--indigo); } .sign.minus { background: var(--orange); } .sign.check { background: var(--green); font-size: 15px; }
+/* hourly chart */
+.chart { overflow-x: auto; padding: 12px 4px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; direction: rtl; }
+.chart::-webkit-scrollbar { display: none; }
+.chart svg { display: block; }
+.chart text { text-anchor: middle; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.chart .ct { font-size: 15px; font-weight: 600; fill: var(--label); }
+.chart .ch { font-size: 12px; font-weight: 500; fill: var(--label2); }
+.chart .cp { font-size: 11px; font-weight: 600; fill: var(--blue); }
+.wk .lo { color: var(--label2); text-align: center; }
+.wk .hi { text-align: center; font-weight: 600; }
+.wk .ic small { display: block; font-size: 11px; color: var(--blue); font-weight: 600; text-align: center; line-height: 1; }
+.sec-h span + span { font-size: 12px; }
 /* folded details */
 details.more { margin-top: 18px; }
 details.more > summary { list-style: none; text-align: center; color: var(--accent); font-size: 15px; padding: 10px; cursor: pointer; }
 details.more > summary::-webkit-details-marker { display: none; }
 details.more[open] > summary { color: var(--label2); }
-.wk { display: grid; grid-template-columns: 52px 30px 1fr auto; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; font-variant-numeric: tabular-nums; }
+.wk { display: grid; grid-template-columns: 48px 32px 34px 1fr 34px; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; font-variant-numeric: tabular-nums; }
 .wk + .wk::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: .5px; background: var(--sep); }
 .wk .ic svg { width: 22px; height: 22px; display: block; margin: auto; }
 .wk .rp { font-size: 13px; color: var(--blue); }
@@ -201,10 +213,10 @@ function nearest(lat, lon) {
 // ---------- weather glyphs (drawn, not emoji) ----------
 const G = {
   sun: '<circle cx="12" cy="12" r="4.6" fill="var(--yellow)"/><g stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g>',
-  moon: '<path fill="var(--label2)" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
+  moon: '<path fill="#B9B3FF" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
   cloud: (y = 0, c = "var(--cloud)") => `<path fill="${c}" transform="translate(0 ${y})" d="M7 19.5h10.2a4.3 4.3 0 0 0 .6-8.56A6 6 0 0 0 6.3 10.2 4.66 4.66 0 0 0 7 19.5z"/>`,
   smallSun: '<g transform="translate(-3.2 -4) scale(.75)"><circle cx="12" cy="12" r="4.6" fill="var(--yellow)"/><g stroke="var(--yellow)" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v1.8M3 12h1.8M5.6 5.6l1.3 1.3M18.4 5.6l-1.3 1.3"/></g></g>',
-  smallMoon: '<path fill="var(--label2)" transform="translate(-2.4 -3.4) scale(.7)" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
+  smallMoon: '<path fill="#B9B3FF" transform="translate(-2.4 -3.4) scale(.7)" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
   drops: '<g stroke="var(--blue)" stroke-width="1.9" stroke-linecap="round"><path d="M8.5 18.5l-1 2.6M12.5 18.5l-1 2.6M16.5 18.5l-1 2.6"/></g>',
   drizzle: '<g fill="var(--blue)"><circle cx="8.6" cy="20.3" r="1"/><circle cx="12.6" cy="20.3" r="1"/><circle cx="16.6" cy="20.3" r="1"/></g>',
   bolt: '<path fill="var(--yellow)" d="M12.8 15.5h-2.6l-1.4 4h2.2l-1 3.6 4.4-5.1h-2.4l.8-2.5z"/>',
@@ -435,35 +447,64 @@ function render() {
   ans.append(list);
   app.append(ans);
 
-  // weather details, folded away
-  const det = el("details", "more");
-  det.open = !!state.detailsOpen;
-  det.ontoggle = () => { state.detailsOpen = det.open; };
-  det.append(el("summary", null, "פרטי מזג אוויר"));
-  const [hourSec, hourCard] = section(`שעה שעה · זריחה ${d.sunrise[today].slice(11, 16)} · שקיעה ${d.sunset[today].slice(11, 16)}`);
-  const hours = el("div", "hours");
+  // Weather details, always shown under the answer
   const st = nowIdx >= 0 ? nowIdx : 0;
-  for (let k = st; k < Math.min(st + 24, H.time.length); k++) {
-    const hr = el("div", "hour"), ic = el("div", "ic");
-    ic.append(svg(glyph(H.weather_code[k], H.is_day[k])));
-    const pp = H.precipitation_probability[k] ?? 0; if (pp >= 20) ic.append(el("div", "p", pp + "%"));
-    hr.append(el("div", "h", k === st ? "עכשיו" : H.time[k].slice(11, 13)), ic, el("div", "tt", r(H.temperature_2m[k]) + "°"));
-    hours.append(hr);
-  }
-  hourCard.append(hours);
+  const [hourSec, hourCard] = section("24 השעות הקרובות", el("span", null, `זריחה ${d.sunrise[today].slice(11, 16)} · שקיעה ${d.sunset[today].slice(11, 16)}`));
+  hourCard.append(hourChart(H, st, Math.min(st + 24, H.time.length)));
   const [weekSec, week] = section("השבוע");
   const idxs = []; for (let i = today; i < Math.min(today + 7, d.time.length); i++) idxs.push(i);
+  const lo = Math.min(...idxs.map((i) => d.temperature_2m_min[i])), hi = Math.max(...idxs.map((i) => d.temperature_2m_max[i])), spanT = hi - lo || 1;
   const dayName = new Intl.DateTimeFormat("he-IL", { weekday: "short", timeZone: "UTC" });
   idxs.forEach((i, j) => {
     const rw = el("div", "wk");
     const ic = el("div", "ic"); ic.append(svg(glyph(d.weather_code[i])));
-    const pp = d.precipitation_probability_max[i] ?? 0;
+    const pp = d.precipitation_probability_max[i] ?? 0; if (pp >= 30) ic.append(el("small", null, pp + "%"));
+    const tr = el("div", "track"), bar = el("span");
+    bar.style.right = ((d.temperature_2m_min[i] - lo) / spanT) * 100 + "%";
+    bar.style.width = Math.max(8, ((d.temperature_2m_max[i] - d.temperature_2m_min[i]) / spanT) * 100) + "%";
+    bar.style.background = `linear-gradient(to left, ${tempColor(d.temperature_2m_min[i])}, ${tempColor(d.temperature_2m_max[i])})`;
+    tr.append(bar);
     rw.append(el("div", "dn", j === 0 ? "היום" : dayName.format(new Date(d.time[i] + "T12:00:00Z")).replace("יום ", "")), ic,
-              el("div", "rg", `${r(d.temperature_2m_min[i])}°–${r(d.temperature_2m_max[i])}°`), el("div", "rp", pp >= 30 ? `גשם ${pp}%` : ""));
+              el("div", "lo", r(d.temperature_2m_min[i]) + "°"), tr, el("div", "hi", r(d.temperature_2m_max[i]) + "°"));
     week.append(rw);
   });
-  det.append(hourSec, weekSec, PREFS);
-  app.append(det);
+  app.append(hourSec, weekSec, PREFS);
+}
+
+// Smooth temperature curve for the next hours, coloured by how warm it feels. Scrolls sideways; "now" is on the right.
+function hourChart(H, from, to) {
+  const n = to - from, step = 52, W = n * step, Hh = 140, top = 52, bottom = 100;
+  const ts = []; for (let k = from; k < to; k++) ts.push(H.temperature_2m[k]);
+  const lo = Math.min(...ts), hi = Math.max(...ts), sp = hi - lo || 1;
+  const X = (i) => W - (i + 0.5) * step, Y = (t) => bottom - ((t - lo) / sp) * (bottom - top);
+  const pts = ts.map((t, i) => [X(i), Y(t)]);
+  let path = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) { // smooth curve through the points
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], cx = (x0 + x1) / 2;
+    path += ` C${cx},${y0} ${cx},${y1} ${x1},${y1}`;
+  }
+  const area = path + ` L${pts[pts.length - 1][0]},${Hh - 18} L${pts[0][0]},${Hh - 18} Z`;
+  const stops = ts.map((t, i) => `<stop offset="${(1 - (i + 0.5) / n).toFixed(3)}" stop-color="${tempColor(H.apparent_temperature[from + i])}"/>`).reverse().join("");
+  let labels = "", icons = "";
+  ts.forEach((t, i) => {
+    const k = from + i, x = X(i), y = Y(t), pp = H.precipitation_probability[k] ?? 0;
+    labels += `<text x="${x}" y="${y - 10}" class="ct">${r(t)}°</text>`;
+    labels += `<text x="${x}" y="${Hh - 2}" class="ch">${i === 0 ? "עכשיו" : H.time[k].slice(11, 13)}</text>`;
+    if (pp >= 20) labels += `<text x="${x}" y="${Hh - 22}" class="cp">${pp}%</text>`;
+    if (i % 1 === 0) icons += `<g transform="translate(${x - 11} 4) scale(0.92)">${glyph(H.weather_code[k], H.is_day[k])}</g>`;
+  });
+  const wrap = el("div", "chart");
+  const t = document.createElement("template");
+  t.innerHTML = `<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" aria-label="טמפרטורה לפי שעה">
+    <defs><linearGradient id="cg" x1="0" x2="1" y1="0" y2="0">${stops}</linearGradient>
+    <linearGradient id="cf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="cm"><path d="${area}" fill="url(#cf)"/></mask></defs>
+    <rect x="0" y="0" width="${W}" height="${Hh}" fill="url(#cg)" mask="url(#cm)"/>
+    <path d="${path}" fill="none" stroke="url(#cg)" stroke-width="4" stroke-linecap="round"/>
+    ${pts.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--card)" stroke="${tempColor(H.apparent_temperature[from + i])}" stroke-width="2.5"/>`).join("")}
+    ${icons}${labels}</svg>`;
+  wrap.append(t.content.firstChild);
+  return wrap;
 }
 function sign(k) {
   const b = el("div", "badge sign " + k);
