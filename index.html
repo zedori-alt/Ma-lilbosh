@@ -5,8 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>מה ללבוש</title>
 <meta name="description" content="מזג האוויר ומה ללבוש בבוקר, בצהריים ובערב">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F2F7" id="themeColor">
+<script>
+  // Light from sunrise to sunset, dark at night (by the last place shown; 06:00–17:00 until we know)
+  (function () { let dark; try { const t = JSON.parse(localStorage.getItem("theme")); dark = t === "dark"; } catch {}
+    if (dark === undefined) { const h = new Date().getHours(); dark = h < 6 || h >= 17; }
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.getElementById("themeColor").content = dark ? "#000000" : "#F2F2F7"; })();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -23,11 +29,10 @@
   --cloud: #9FB3CC;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Hebrew", system-ui, "Segoe UI", Arial, sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #000000; --card: #1C1C1E; --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3);
+:root[data-theme="dark"] {
+   --bg: #000000; --card: #1C1C1E; --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3);
           --sep: rgba(84,84,88,.6); --fill: rgba(118,118,128,.24); --seg-on: #636366; --accent: #0A84FF;
           --blue: #0A84FF; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6; --teal: #40C8E0; --cloud: #8FA3BD; color-scheme: dark; }
-}
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -384,7 +389,21 @@ function timeInput(label, key) {
   return box;
 }
 
+// Day = light, night = dark, by sunrise/sunset of the place shown
+function applyTheme(data) {
+  const tz = data.timezone, d = data.daily, i = d.time.indexOf(localDate(tz));
+  if (i < 0) return;
+  const now = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date()).replace(", ", "T");
+  const dark = now < d.sunrise[i] || now >= d.sunset[i];
+  const t = dark ? "dark" : "light";
+  if (document.documentElement.dataset.theme !== t) document.documentElement.dataset.theme = t;
+  $("#themeColor").content = dark ? "#000000" : "#F2F2F7";
+  store.set("theme", t);
+}
+setInterval(() => { if (state.data) applyTheme(state.data); }, 60 * 1000);
+
 function render() {
+  applyTheme(state.data);
   const data = state.data, app = $("#app");
   const tz = data.timezone, H = data.hourly, d = data.daily;
   const todayStr = localDate(tz), today = d.time.indexOf(todayStr);
