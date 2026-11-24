@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>מה ללבוש</title>
-<meta name="description" content="מזג האוויר ומה ללבוש היום ומחר">
-<meta name="theme-color" content="#0f6fa8">
+<meta name="description" content="מזג האוויר ומה ללבוש בבוקר, בצהריים ובערב">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -14,170 +15,138 @@
 <meta name="apple-mobile-web-app-title" content="מה ללבוש">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
-/* Layout: one phone-width column. "Now" card, verdict + what to wear, the day in four parts, 24 hours, 7 days. */
+/* iOS-style grouped layout: system font, inset cards, hairline separators, system colors. */
 :root {
-  --bg: #eaf2f7; --surface: #ffffff; --ink: #14202b; --muted: #5d6d7c; --line: #d5e1ea;
-  --sky: #0f6fa8; --sky-ink: #ffffff; --cold: #3b82c4; --mild: #3aa17e; --warm: #e39b26; --hot: #d9542b;
-  --chip: #eef4f8;
-  --font: -apple-system, "SF Hebrew", "Segoe UI", Rubik, Arial, sans-serif;
+  --bg: #F2F2F7; --card: #FFFFFF; --label: #000000; --label2: rgba(60,60,67,.6); --label3: rgba(60,60,67,.3);
+  --sep: rgba(60,60,67,.18); --fill: rgba(118,118,128,.12); --seg-on: #FFFFFF; --accent: #007AFF;
+  --blue: #007AFF; --orange: #FF9500; --yellow: #FFCC00; --indigo: #5856D6; --teal: #30B0C7; --red: #FF3B30; --green: #34C759;
+  --cloud: #AEAEB2;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Hebrew", system-ui, "Segoe UI", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0c141c; --surface: #15212c; --ink: #e9f0f5; --muted: #94a6b6; --line: #24323f;
-          --sky: #11507a; --chip: #1c2a37; color-scheme: dark; }
+  :root { --bg: #000000; --card: #1C1C1E; --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3);
+          --sep: rgba(84,84,88,.6); --fill: rgba(118,118,128,.24); --seg-on: #636366; --accent: #0A84FF;
+          --blue: #0A84FF; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6; --teal: #40C8E0; --cloud: #8E8E93; color-scheme: dark; }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5;
-  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  -webkit-tap-highlight-color: transparent;
+  margin: 0; background: var(--bg); color: var(--label); font-family: var(--font); font-size: 17px; line-height: 1.3;
+  letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
-.wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
-select, button { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; }
-button { cursor: pointer; }
-select:focus-visible, button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.wrap { max-width: 480px; margin: 0 auto; }
+button, select { font: inherit; color: inherit; }
+svg.i { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; overflow: visible; }
 
-.now { background: var(--sky); color: var(--sky-ink); border-radius: 22px; padding: 20px 22px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
-.now .temp { font-size: 64px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.now .icon { font-size: 56px; line-height: 1; }
-.now .desc { font-size: 18px; font-weight: 500; }
-.now .meta { grid-column: 1 / -1; font-size: 14px; opacity: .9; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+/* nav bar: location picker at the top-left */
+.nav { display: flex; justify-content: flex-end; height: 44px; align-items: center; }
+.loc { position: relative; display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: 17px; }
+.loc svg { width: 15px; height: 15px; }
+.loc select { position: absolute; inset: 0; opacity: 0; width: 100%; font-size: 16px; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
-.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-.tabs button { border-radius: 999px; padding: 5px 14px; }
-.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-.verdict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-.badge { font-weight: 700; font-size: 15px; color: #fff; border-radius: 999px; padding: 3px 12px; }
-.range { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.verdict-text { font-size: 20px; font-weight: 700; margin: 6px 0 12px; }
-.outfits { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.outfit { display: grid; grid-template-columns: 64px 30px 1fr; align-items: center; gap: 8px; background: var(--chip); border-radius: 14px; padding: 10px 12px; }
-.outfit.past { opacity: .45; }
-.outfit .n { color: var(--muted); font-size: 14px; }
-.outfit .e { font-size: 24px; line-height: 1; text-align: center; }
-.outfit .w { font-size: 17px; font-weight: 700; }
-.outfit .w small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
-.wear { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.wear li { display: flex; gap: 10px; align-items: flex-start; background: var(--chip); border-radius: 12px; padding: 9px 12px; }
-.wear .e { font-size: 20px; line-height: 1.3; }
+/* hero */
+.hero { text-align: center; padding: 6px 0 22px; }
+.hero .city { font-size: 30px; font-weight: 400; letter-spacing: 0; }
+.hero .temp { font-size: 96px; font-weight: 200; line-height: 1; margin: 2px 0 0; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; padding-left: .2em; }
+.hero .cond { font-size: 20px; font-weight: 500; color: var(--label2); }
+.hero .hl { font-size: 17px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.hero .sum { font-size: 15px; color: var(--label2); margin-top: 10px; }
 
-h2 { font-size: 17px; margin: 0 0 10px; }
-.parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.part { text-align: center; background: var(--chip); border-radius: 14px; padding: 10px 4px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
-.part .n { font-size: 13px; color: var(--muted); }
-.part .i { font-size: 24px; }
-.part .t { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.part .bar { width: 70%; height: 5px; border-radius: 3px; }
-.part .r { font-size: 12px; color: var(--muted); min-height: 18px; }
+/* grouped sections */
+.sec { margin-top: 26px; }
+.sec-h { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 7px; font-size: 13px; color: var(--label2); text-transform: none; }
+.card { background: var(--card); border-radius: 14px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 9px 16px; position: relative; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 0; right: 58px; height: .5px; background: var(--sep); }
+.row.plain + .row.plain::before { right: 16px; }
+.badge { flex: 0 0 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; color: #fff; }
+.badge svg { width: 18px; height: 18px; }
+.row .main { flex: 1; min-width: 0; }
+.row .t1 { font-size: 17px; }
+.row .t2 { font-size: 13px; color: var(--label2); margin-top: 1px; }
+.row .val { font-size: 17px; color: var(--label2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row.past { opacity: .4; }
 
-.hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
-.hour { flex: 0 0 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; }
-.hour .col { width: 22px; height: 70px; background: var(--chip); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
-.hour .fill { width: 100%; border-radius: 6px; }
-.hour .tt { font-weight: 700; font-variant-numeric: tabular-nums; }
-.hour .hh { color: var(--muted); font-variant-numeric: tabular-nums; }
-.hour .rp { color: var(--cold); font-size: 11px; min-height: 16px; font-variant-numeric: tabular-nums; }
+/* segmented control */
+.seg { display: inline-flex; background: var(--fill); border-radius: 9px; padding: 2px; }
+.seg button { border: 0; background: transparent; border-radius: 7px; padding: 4px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--seg-on); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); }
+.wide-seg { display: flex; }
+.wide-seg button { flex: 1; }
 
-.days { list-style: none; margin: 0; padding: 0; }
-.days li { display: grid; grid-template-columns: 64px 34px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; }
-.days li + li { border-top: 1px solid var(--line); }
-.days .dn { font-weight: 500; }
-.days .di { font-size: 20px; text-align: center; line-height: 1.1; }
-.days .di small { display: block; font-size: 11px; color: var(--cold); font-variant-numeric: tabular-nums; }
-.days .track { height: 6px; background: var(--chip); border-radius: 3px; position: relative; }
-.days .seg { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
-.days .mm { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.days .mm b { font-weight: 700; }
+/* hourly */
+.hours { display: flex; overflow-x: auto; padding: 12px 6px 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hours::-webkit-scrollbar { display: none; }
+.hour { flex: 0 0 54px; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.hour .h { font-size: 13px; color: var(--label2); font-weight: 500; }
+.hour .ic { height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hour .ic svg { width: 24px; height: 24px; }
+.hour .p { font-size: 11px; color: var(--blue); font-weight: 600; line-height: 1; }
+.hour .tt { font-weight: 500; }
 
-.prefs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
-.seg-ctl { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.seg-ctl button { border: 0; border-radius: 0; padding: 5px 12px; font-size: 14px; background: var(--surface); }
-.seg-ctl button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+/* week */
+.day { display: grid; grid-template-columns: 58px 34px 36px 1fr 36px; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; position: relative; font-variant-numeric: tabular-nums; }
+.day + .day::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: .5px; background: var(--sep); }
+.day .dn { font-weight: 500; }
+.day .ic { display: flex; flex-direction: column; align-items: center; }
+.day .ic svg { width: 24px; height: 24px; }
+.day .ic small { font-size: 11px; color: var(--blue); font-weight: 600; line-height: 1; }
+.day .lo { color: var(--label2); text-align: center; }
+.day .hi { text-align: center; }
+.track { height: 5px; border-radius: 3px; background: var(--fill); position: relative; }
+.track span { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
 
-.msg { text-align: center; color: var(--muted); padding: 30px 10px; }
-.note { font-size: 13px; color: var(--muted); text-align: center; }
-.foot { font-size: 12px; color: var(--muted); text-align: center; }
+.msg { text-align: center; color: var(--label2); padding: 80px 20px; }
+.msg button { margin-top: 14px; border: 0; background: var(--fill); color: var(--accent); border-radius: 10px; padding: 8px 18px; }
+.foot { text-align: center; font-size: 12px; color: var(--label3); margin-top: 22px; }
 .foot a { color: inherit; }
-@media (max-width: 380px) { .parts { grid-template-columns: repeat(2, 1fr); } .now .temp { font-size: 52px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>מה ללבוש</h1>
-    <select id="city" aria-label="מיקום"></select>
-  </header>
-
-  <div id="app"><div class="msg">טוען את מזג האוויר…</div></div>
-
-  <div class="card prefs">
-    <span>בדרך כלל לי:</span>
-    <span class="seg-ctl" id="bias" role="group" aria-label="רגישות לקור">
-      <button data-v="-3">קר מהר</button><button data-v="0">רגיל</button><button data-v="3">חם מהר</button>
-    </span>
+  <div class="nav">
+    <label class="loc" id="locBtn">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M14.6 1.4c.3.3.4.7.2 1.1l-5.3 11.9c-.4.9-1.7.8-1.9-.2L6.6 9.4 1.8 8.4c-1-.2-1.1-1.5-.2-1.9L13.5 1.2c.4-.2.8-.1 1.1.2z"/></svg>
+      <span id="locName">מיקום</span>
+      <svg viewBox="0 0 16 16" aria-hidden="true" style="width:11px;height:11px"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.5 6l4.5 4.5L12.5 6"/></svg>
+      <select id="city" aria-label="בחירת מיקום"></select>
+    </label>
   </div>
 
-  <div class="foot">נתוני מזג אוויר: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <span id="updated"></span></div>
+  <div id="app"><div class="msg">טוען…</div></div>
+
+  <div class="sec">
+    <div class="sec-h"><span>התאמה אישית</span></div>
+    <div class="card">
+      <div class="row plain">
+        <div class="main"><div class="t1">בדרך כלל לי</div></div>
+        <div class="seg" id="bias" role="group" aria-label="רגישות לקור">
+          <button data-v="-3">קר מהר</button><button data-v="0">רגיל</button><button data-v="3">חם מהר</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">נתונים: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <span id="updated"></span></div>
 </div>
 
 <script>
 const CITIES = [ // Tel Aviv first (the fallback), the rest alphabetical
-  ["תל אביב", 32.0853, 34.7818],
-  ["אילת", 29.5577, 34.9519],
-  ["אריאל", 32.1046, 35.1745],
-  ["אשדוד", 31.8014, 34.6435],
-  ["אשקלון", 31.6688, 34.5743],
-  ["באר שבע", 31.252, 34.7915],
-  ["בית שמש", 31.747, 34.9881],
-  ["בני ברק", 32.0807, 34.8338],
-  ["בת ים", 32.0171, 34.7454],
-  ["גבעתיים", 32.0722, 34.8125],
-  ["דימונה", 31.07, 35.033],
-  ["הוד השרון", 32.15, 34.888],
-  ["הרצליה", 32.1624, 34.8447],
-  ["זכרון יעקב", 32.5707, 34.952],
-  ["חדרה", 32.434, 34.9196],
-  ["חולון", 32.0158, 34.7874],
-  ["חיפה", 32.794, 34.9896],
-  ["טבריה", 32.7959, 35.531],
-  ["יבנה", 31.878, 34.739],
-  ["יקנעם", 32.6593, 35.1059],
-  ["ירושלים", 31.7683, 35.2137],
-  ["כפר סבא", 32.1782, 34.9076],
-  ["כרמיאל", 32.919, 35.295],
-  ["לוד", 31.951, 34.8881],
-  ["מודיעין", 31.8969, 35.0095],
-  ["מעלה אדומים", 31.777, 35.298],
-  ["מצפה רמון", 30.61, 34.801],
-  ["נהריה", 33.0059, 35.0941],
-  ["נס ציונה", 31.9293, 34.7987],
-  ["נצרת", 32.6996, 35.3035],
-  ["נתניה", 32.3215, 34.8532],
-  ["עכו", 32.9281, 35.0818],
-  ["עפולה", 32.6078, 35.2897],
-  ["ערד", 31.2588, 35.2128],
-  ["פתח תקווה", 32.0871, 34.8875],
-  ["צפת", 32.9646, 35.496],
-  ["קריית גת", 31.61, 34.7642],
-  ["קריית שמונה", 33.2073, 35.5697],
-  ["ראש העין", 32.0956, 34.9566],
-  ["ראשון לציון", 31.973, 34.7925],
-  ["רחובות", 31.8928, 34.8113],
-  ["רמלה", 31.9279, 34.8625],
-  ["רמת גן", 32.0684, 34.8248],
-  ["רעננה", 32.1848, 34.8713],
+  ["תל אביב", 32.0853, 34.7818], ["אילת", 29.5577, 34.9519], ["אריאל", 32.1046, 35.1745], ["אשדוד", 31.8014, 34.6435],
+  ["אשקלון", 31.6688, 34.5743], ["באר שבע", 31.252, 34.7915], ["בית שמש", 31.747, 34.9881], ["בני ברק", 32.0807, 34.8338],
+  ["בת ים", 32.0171, 34.7454], ["גבעתיים", 32.0722, 34.8125], ["דימונה", 31.07, 35.033], ["הוד השרון", 32.15, 34.888],
+  ["הרצליה", 32.1624, 34.8447], ["זכרון יעקב", 32.5707, 34.952], ["חדרה", 32.434, 34.9196], ["חולון", 32.0158, 34.7874],
+  ["חיפה", 32.794, 34.9896], ["טבריה", 32.7959, 35.531], ["יבנה", 31.878, 34.739], ["יקנעם", 32.6593, 35.1059],
+  ["ירושלים", 31.7683, 35.2137], ["כפר סבא", 32.1782, 34.9076], ["כרמיאל", 32.919, 35.295], ["לוד", 31.951, 34.8881],
+  ["מודיעין", 31.8969, 35.0095], ["מעלה אדומים", 31.777, 35.298], ["מצפה רמון", 30.61, 34.801], ["נהריה", 33.0059, 35.0941],
+  ["נס ציונה", 31.9293, 34.7987], ["נצרת", 32.6996, 35.3035], ["נתניה", 32.3215, 34.8532], ["עכו", 32.9281, 35.0818],
+  ["עפולה", 32.6078, 35.2897], ["ערד", 31.2588, 35.2128], ["פתח תקווה", 32.0871, 34.8875], ["צפת", 32.9646, 35.496],
+  ["קריית גת", 31.61, 34.7642], ["קריית שמונה", 33.2073, 35.5697], ["ראש העין", 32.0956, 34.9566], ["ראשון לציון", 31.973, 34.7925],
+  ["רחובות", 31.8928, 34.8113], ["רמלה", 31.9279, 34.8625], ["רמת גן", 32.0684, 34.8248], ["רעננה", 32.1848, 34.8713],
   ["שדרות", 31.525, 34.5961]
 ];
 const HERE = "here";
-// Name of the closest listed city, for the "my location" label
-function nearest(lat, lon) {
-  let best = null, bd = Infinity;
-  CITIES.forEach(([n, a, b]) => { const dd = (a - lat) ** 2 + ((b - lon) * Math.cos(lat * Math.PI / 180)) ** 2; if (dd < bd) { bd = dd; best = n; } });
-  return bd < 0.04 ? best : "המיקום שלי"; // within ~20 km
-}
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -187,89 +156,124 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-
-// WMO weather codes (Open-Meteo docs) -> [icon, Hebrew description]
-function sky(code, isDay = 1) {
-  if (code === 0) return [isDay ? "☀️" : "🌙", "שמיים בהירים"];
-  if (code === 1) return [isDay ? "🌤️" : "🌙", "בהיר ברובו"];
-  if (code === 2) return [isDay ? "⛅" : "☁️", "מעונן חלקית"];
-  if (code === 3) return ["☁️", "מעונן"];
-  if (code === 45 || code === 48) return ["🌫️", "ערפל"];
-  if (code >= 51 && code <= 57) return ["🌦️", "טפטוף"];
-  if (code >= 61 && code <= 67) return ["🌧️", "גשם"];
-  if (code >= 71 && code <= 77) return ["🌨️", "שלג"];
-  if (code >= 80 && code <= 82) return ["🌦️", "ממטרים"];
-  if (code >= 85 && code <= 86) return ["🌨️", "ממטרי שלג"];
-  if (code >= 95) return ["⛈️", "סופת רעמים"];
-  return ["🌡️", ""];
+const svg = (inner, cls = "i") => { const t = document.createElement("template"); t.innerHTML = `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`; return t.content.firstChild; };
+function nearest(lat, lon) {
+  let best = null, bd = Infinity;
+  CITIES.forEach(([n, a, b]) => { const dd = (a - lat) ** 2 + ((b - lon) * Math.cos(lat * Math.PI / 180)) ** 2; if (dd < bd) { bd = dd; best = n; } });
+  return bd < 0.04 ? best : "המיקום שלי"; // within ~20 km
 }
 
-// Personal bias: "I get cold fast" shifts every reading down 3°, "I get hot fast" shifts up.
+// ---------- weather glyphs (drawn, not emoji) ----------
+const G = {
+  sun: '<circle cx="12" cy="12" r="4.6" fill="var(--yellow)"/><g stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g>',
+  moon: '<path fill="var(--label2)" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
+  cloud: (y = 0, c = "var(--cloud)") => `<path fill="${c}" transform="translate(0 ${y})" d="M7 19.5h10.2a4.3 4.3 0 0 0 .6-8.56A6 6 0 0 0 6.3 10.2 4.66 4.66 0 0 0 7 19.5z"/>`,
+  smallSun: '<g transform="translate(-3.2 -4) scale(.75)"><circle cx="12" cy="12" r="4.6" fill="var(--yellow)"/><g stroke="var(--yellow)" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v1.8M3 12h1.8M5.6 5.6l1.3 1.3M18.4 5.6l-1.3 1.3"/></g></g>',
+  smallMoon: '<path fill="var(--label2)" transform="translate(-2.4 -3.4) scale(.7)" d="M14.5 3.2a8.8 8.8 0 1 0 6.3 12.1A7.3 7.3 0 0 1 14.5 3.2z"/>',
+  drops: '<g stroke="var(--blue)" stroke-width="1.9" stroke-linecap="round"><path d="M8.5 18.5l-1 2.6M12.5 18.5l-1 2.6M16.5 18.5l-1 2.6"/></g>',
+  drizzle: '<g fill="var(--blue)"><circle cx="8.6" cy="20.3" r="1"/><circle cx="12.6" cy="20.3" r="1"/><circle cx="16.6" cy="20.3" r="1"/></g>',
+  bolt: '<path fill="var(--yellow)" d="M12.8 15.5h-2.6l-1.4 4h2.2l-1 3.6 4.4-5.1h-2.4l.8-2.5z"/>',
+  snow: '<g fill="var(--teal)"><circle cx="8.6" cy="20.6" r="1.1"/><circle cx="12.6" cy="21.4" r="1.1"/><circle cx="16.6" cy="20.6" r="1.1"/></g>',
+  fog: '<g stroke="var(--cloud)" stroke-width="2" stroke-linecap="round"><path d="M4 9h16M3 13h18M5 17h14"/></g>'
+};
+function glyph(code, isDay = 1) {
+  const up = (s) => G.cloud(-3) + s;
+  if (code === 0 || code === 1) return isDay ? G.sun : G.moon;
+  if (code === 2) return (isDay ? G.smallSun : G.smallMoon) + G.cloud(0.5);
+  if (code === 3) return G.cloud(-1);
+  if (code === 45 || code === 48) return G.fog;
+  if (code >= 51 && code <= 57) return up(G.drizzle);
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return up(G.drops);
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return up(G.snow);
+  if (code >= 95) return up(G.bolt);
+  return G.cloud(-1);
+}
+function skyText(code) {
+  if (code === 0) return "בהיר";
+  if (code === 1) return "בהיר ברובו";
+  if (code === 2) return "מעונן חלקית";
+  if (code === 3) return "מעונן";
+  if (code === 45 || code === 48) return "ערפל";
+  if (code >= 51 && code <= 57) return "טפטוף";
+  if (code >= 61 && code <= 67) return "גשם";
+  if (code >= 71 && code <= 77) return "שלג";
+  if (code >= 80 && code <= 82) return "ממטרים";
+  if (code >= 85 && code <= 86) return "ממטרי שלג";
+  if (code >= 95) return "סופת רעמים";
+  return "";
+}
+// Settings-style badge icons
+const B = {
+  morning: ['var(--orange)', '<path fill="#fff" d="M12 9.2a5 5 0 0 1 5 5H7a5 5 0 0 1 5-5z"/><g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3.5v2.3M5.4 7.6l1.5 1.5M18.6 7.6l-1.5 1.5M3.5 17.5h17"/></g>'],
+  noon: ['var(--yellow)', '<circle cx="12" cy="12" r="4.4" fill="#fff"/><g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></g>'],
+  evening: ['var(--indigo)', '<path fill="#fff" d="M14.2 4a8.2 8.2 0 1 0 5.9 11.3A6.8 6.8 0 0 1 14.2 4z"/>'],
+  umbrella: ['var(--blue)', '<path fill="#fff" d="M12 3.5a8.5 8.5 0 0 1 8.5 8.3H3.5A8.5 8.5 0 0 1 12 3.5z"/><path fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" d="M12 11.5v6.2a2 2 0 0 1-4 0"/>'],
+  uv: ['var(--orange)', '<circle cx="12" cy="12" r="4.4" fill="#fff"/><g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></g>'],
+  wind: ['var(--teal)', '<g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3.5 9h11a2.6 2.6 0 1 0-2.6-2.6M3.5 13h14a2.8 2.8 0 1 1-2.8 2.8M3.5 17h7"/></g>'],
+  water: ['var(--blue)', '<path fill="#fff" d="M12 3.5s6 6.4 6 10.6a6 6 0 0 1-12 0c0-4.2 6-10.6 6-10.6z"/>']
+};
+const badge = (k) => { const b = el("div", "badge"); b.style.background = B[k][0]; b.append(svg(B[k][1])); return b; };
+
+// ---------- clothing ----------
+// Personal bias: "I get cold fast" shifts every reading down 3°, "I get hot fast" up.
 let bias = +(store.get("bias") ?? 0);
 const adj = (t) => t + bias;
-
-// How it feels, from the (adjusted) "feels like" temperature
-function feel(t) {
-  t = adj(t);
-  if (t < 10) return { word: "קר מאוד", color: "var(--cold)" };
-  if (t < 16) return { word: "קר", color: "var(--cold)" };
-  if (t < 20) return { word: "קריר", color: "var(--mild)" };
-  if (t < 26) return { word: "נעים", color: "var(--mild)" };
-  if (t < 30) return { word: "חם", color: "var(--warm)" };
-  return { word: "חם מאוד", color: "var(--hot)" };
-}
-function tempColor(t) { t = adj(t); return t < 16 ? "var(--cold)" : t < 26 ? "var(--mild)" : t < 30 ? "var(--warm)" : "var(--hot)"; }
-
-// Clothing in general categories only, from the feels-like temperature.
-// level: 0 coldest ... 5 hottest. layer = what to add on top at that level.
+// General categories only, by feels-like temperature (tuned for Israelis: 20° in the morning is not short-sleeve weather)
 const LEVELS = [
-  { max: 12, emoji: "🧥", main: "בגדים ארוכים ומעיל חם", layer: "מעיל חם" },
-  { max: 17, emoji: "🧥", main: "בגדים ארוכים וג'קט", layer: "ג'קט" },
-  { max: 21, emoji: "👖", main: "בגדים ארוכים וסווטשרט", layer: "סווטשרט" },
-  { max: 25, emoji: "👕", main: "קצר או ארוך דק", layer: "שכבה דקה" },
-  { max: 30, emoji: "👕", main: "בגדים קצרים", layer: null },
-  { max: 99, emoji: "🩳", main: "בגדים קצרים וקלים", layer: null }
+  { max: 11, text: "ארוך ומעיל חם" },
+  { max: 16, text: "ארוך וג'קט" },
+  { max: 20, text: "ארוך וסווטשרט" },
+  { max: 23, text: "ארוך דק" },
+  { max: 27, text: "קצר" },
+  { max: 99, text: "קצר וקליל" }
 ];
-const level = (t) => { t = adj(t); return LEVELS.findIndex((l) => t < l.max); };
-
-function outfit(day) {
-  const { warmest, coldest, rain, uv, wind } = day;
-  const tips = [];
-  const lw = level(warmest);
-  if (lw >= 5) tips.push(["💧", "חם מאוד. שתו הרבה מים."]);
-  if (rain >= 60) tips.push(["☂️", `סיכוי גבוה לגשם (${rain}%). מטרייה ונעליים סגורות.`]);
-  else if (rain >= 30) tips.push(["🌂", `אולי ירד גשם (${rain}%). מטרייה קטנה בתיק.`]);
-  if (uv >= 6) tips.push(["🧴", `קרינה חזקה (UV ${r(uv)}). קרם הגנה וכובע.`]);
-  else if (uv >= 3 && lw >= 3) tips.push(["🧴", `קרינה בינונית (UV ${r(uv)}). קרם הגנה אם תהיו הרבה בחוץ.`]);
-  if (wind >= 30) tips.push(["💨", `רוח חזקה (עד ${r(wind)} קמ״ש). עדיף משהו נגד רוח.`]);
-  return { tips };
+const level = (t) => LEVELS.findIndex((l) => adj(t) < l.max);
+function feelWord(t) {
+  t = adj(t);
+  return t < 10 ? "קר מאוד" : t < 16 ? "קר" : t < 20 ? "קריר" : t < 26 ? "נעים" : t < 30 ? "חם" : "חם מאוד";
+}
+function tempColor(t) {
+  t = adj(t);
+  return t < 10 ? "#5AC8FA" : t < 16 ? "#64D2FF" : t < 20 ? "#34C759" : t < 26 ? "#A6D608" : t < 30 ? "#FFCC00" : "#FF9500";
+}
+// Morning and evening go by the coldest reading in the window (air or feels-like, whichever is lower),
+// noon by the average feels-like. Better to carry a layer than to be cold at 8am.
+const WEAR_PARTS = [
+  ["בוקר", "morning", 6, 10, "cold"],
+  ["צהריים", "noon", 11, 16, "avg"],
+  ["ערב", "evening", 17, 22, "cold"]
+];
+function partTemp(data, date, from, to, mode) {
+  const H = data.hourly, vals = [];
+  for (let h = from; h <= to; h++) {
+    const k = H.time.indexOf(date + "T" + String(h).padStart(2, "0") + ":00");
+    if (k < 0) continue;
+    const a = H.apparent_temperature[k], t = H.temperature_2m[k];
+    if (a == null || t == null) continue;
+    vals.push(mode === "cold" ? Math.min(a, t) : a);
+  }
+  if (!vals.length) return null;
+  return mode === "cold" ? Math.min(...vals) : vals.reduce((s, v) => s + v, 0) / vals.length;
 }
 
-// Today's date (YYYY-MM-DD) in the forecast's time zone, so cached data never shows yesterday as "today".
-function localDate(tz, offsetDays = 0) {
-  const d = new Date(Date.now() + offsetDays * 864e5);
-  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-}
-function localHour(tz) {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(new Date());
-  return +parts;
-}
+// ---------- time ----------
+function localDate(tz) { return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+function localHour(tz) { return +new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(new Date()); }
 
 // ---------- data ----------
 async function load(lat, lon, tz) {
   const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
     "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day" +
-    "&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,uv_index,wind_speed_10m,is_day" +
-    "&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_probability_max,precipitation_sum,uv_index_max,wind_speed_10m_max,sunrise,sunset" +
+    "&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,is_day" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,wind_speed_10m_max,sunrise,sunset" +
     "&timezone=" + encodeURIComponent(tz) + "&forecast_days=8";
   const res = await fetch(url);
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
-
 function getPosition() {
   return new Promise((ok, fail) => {
-    if (!navigator.geolocation) return fail(new Error("אין גישה למיקום בדפדפן הזה"));
+    if (!navigator.geolocation) return fail(new Error("אין גישה למיקום"));
     navigator.geolocation.getCurrentPosition(
       (p) => ok([+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3)]),
       (e) => fail(new Error(e.code === 1 ? "לא ניתנה הרשאה למיקום" : "לא הצלחתי למצוא את המיקום")),
@@ -279,239 +283,165 @@ function getPosition() {
 }
 
 // ---------- render ----------
-// Hours are inclusive. Night runs 22:00 to 05:00 the next morning.
-const WEAR_PARTS = [["בוקר", 7, 11, "min"], ["צהריים", 12, 16, "max"], ["ערב", 17, 22, "min"]];
-const PARTS = [["בוקר", 6, 11], ["צהריים", 12, 16], ["ערב", 17, 21], ["לילה", 22, 29]];
-let state = { data: null, tab: 0, stale: false };
+let state = { data: null, tab: 0, stale: false, place: "" };
 
-function dayInfo(data, i) {
-  const d = data.daily, H = data.hourly;
-  const date = d.time[i];
-  // feels-like range during waking hours (07:00–22:00) drives the clothing advice
-  const idx = [];
-  H.time.forEach((t, k) => { const h = +t.slice(11, 13); if (t.startsWith(date) && h >= 7 && h <= 22) idx.push(k); });
-  const feels = idx.map((k) => H.apparent_temperature[k]).filter((x) => x != null);
-  return {
-    date,
-    warmest: feels.length ? Math.max(...feels) : d.apparent_temperature_max[i],
-    coldest: feels.length ? Math.min(...feels) : d.apparent_temperature_min[i],
-    tmax: d.temperature_2m_max[i], tmin: d.temperature_2m_min[i],
-    rain: d.precipitation_probability_max[i] ?? 0, mm: d.precipitation_sum[i] ?? 0,
-    uv: d.uv_index_max[i] ?? 0, wind: d.wind_speed_10m_max[i] ?? 0,
-    sunrise: d.sunrise[i], sunset: d.sunset[i], code: d.weather_code[i]
-  };
+function section(title, extra) {
+  const s = el("div", "sec"), h = el("div", "sec-h");
+  h.append(el("span", null, title)); if (extra) h.append(extra);
+  const c = el("div", "card"); s.append(h, c); return [s, c];
 }
-
-function card(title) { const c = el("div", "card"); c.style.marginTop = "16px"; if (title) c.append(el("h2", null, title)); return c; }
+function row(badgeKey, t1, t2, val, cls) {
+  const rw = el("div", "row" + (cls ? " " + cls : ""));
+  if (badgeKey) rw.append(badge(badgeKey));
+  const m = el("div", "main"); m.append(el("div", "t1", t1)); if (t2) m.append(el("div", "t2", t2));
+  rw.append(m); if (val != null) rw.append(el("div", "val", val));
+  return rw;
+}
 
 function render() {
   const data = state.data, app = $("#app");
-  app.textContent = "";
   const tz = data.timezone, H = data.hourly, d = data.daily;
   const today = d.time.indexOf(localDate(tz));
   if (today < 0) throw new Error("הנתונים השמורים ישנים מדי");
+  app.textContent = "";
 
-  // Now. With fresh data use "current"; with old cached data use this hour from the hourly forecast.
+  // Now: from "current", or this hour of the hourly forecast when showing old saved data
   let c = data.current;
   if (state.stale) {
     const k = H.time.indexOf(localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0") + ":00");
-    if (k >= 0) c = { time: H.time[k], temperature_2m: H.temperature_2m[k], apparent_temperature: H.apparent_temperature[k],
-                      relative_humidity_2m: null, weather_code: H.weather_code[k], wind_speed_10m: H.wind_speed_10m[k], is_day: H.is_day[k] };
+    if (k >= 0) c = { temperature_2m: H.temperature_2m[k], apparent_temperature: H.apparent_temperature[k], weather_code: H.weather_code[k], wind_speed_10m: H.wind_speed_10m[k], is_day: H.is_day[k] };
   }
-  const [icon, desc] = sky(c.weather_code, c.is_day);
-  const now = el("div", "now");
-  now.append(el("div", "temp", r(c.temperature_2m) + "°"), el("div", "icon", icon), el("div", "desc", desc));
-  const meta = el("div", "meta");
-  meta.append(el("span", null, "מרגיש כמו " + r(c.apparent_temperature) + "°"));
-  if (c.relative_humidity_2m != null) meta.append(el("span", null, "לחות " + r(c.relative_humidity_2m) + "%"));
-  meta.append(el("span", null, "רוח " + r(c.wind_speed_10m) + " קמ״ש"));
-  now.append(meta);
-  app.append(now);
+  const hero = el("div", "hero");
+  hero.append(el("div", "city", state.place), el("div", "temp", r(c.temperature_2m) + "°"), el("div", "cond", skyText(c.weather_code)),
+              el("div", "hl", `מקס׳ ${r(d.temperature_2m_max[today])}°  מינ׳ ${r(d.temperature_2m_min[today])}°`));
+  const extra = [`מרגיש כמו ${r(c.apparent_temperature)}°`, `רוח ${r(c.wind_speed_10m)} קמ״ש`];
+  if (c.relative_humidity_2m != null) extra.push(`לחות ${r(c.relative_humidity_2m)}%`);
+  hero.append(el("div", "sum", extra.join("  ·  ")));
+  app.append(hero);
 
-  // Verdict + what to wear (today / tomorrow)
-  const wearCard = card();
-  const tabs = el("div", "tabs"); tabs.setAttribute("role", "tablist");
-  ["היום", "מחר"].forEach((name, i) => {
-    const b = el("button", null, name); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", state.tab === i);
-    b.onclick = () => { state.tab = i; render(); };
-    tabs.append(b);
-  });
-  wearCard.append(tabs);
-  const di = today + state.tab;
-  const day = dayInfo(data, di);
-  const f = feel(day.warmest);
-  const v = el("div", "verdict");
-  const badge = el("span", "badge", f.word); badge.style.background = f.color;
-  v.append(badge, el("span", "range", r(day.tmin) + "°–" + r(day.tmax) + "°"),
-           el("span", "range", "זריחה " + day.sunrise.slice(11, 16) + " · שקיעה " + day.sunset.slice(11, 16)));
-  wearCard.append(v);
-  const when = state.tab ? "מחר" : "היום";
-  const coldEnds = adj(day.coldest) < 16 && adj(day.warmest) >= 20;
-  const rainy = day.rain >= 60 ? " וגשום" : "";
-  wearCard.append(el("div", "verdict-text", coldEnds
-    ? `${when} קריר בבוקר ובערב, ${f.word} בצהריים${rainy}.`
-    : `${state.tab ? "מחר יהיה" : "היום"} ${f.word}${rainy}.`));
-  // What to wear in the morning, at noon and in the evening.
-  // Morning/evening go by the coldest feels-like hour in that part, noon by the warmest, so you are never under-dressed.
-  const box = el("div", "outfits");
+  // What to wear: morning / noon / evening, for today or tomorrow
+  const seg = el("div", "seg");
+  ["היום", "מחר"].forEach((n, i) => { const b = el("button", null, n); b.setAttribute("aria-pressed", state.tab === i); b.onclick = () => { state.tab = i; render(); }; seg.append(b); });
+  const [wearSec, wear] = section("מה ללבוש", seg);
+  const di = today + state.tab, date = d.time[di];
   const isToday = state.tab === 0, hourNow = localHour(tz);
-  WEAR_PARTS.forEach(([name, from, to, pick]) => {
-    const ks = []; for (let h = from; h <= to; h++) { const k = H.time.indexOf(day.date + "T" + String(h).padStart(2, "0") + ":00"); if (k >= 0) ks.push(k); }
-    if (!ks.length) return;
-    const feels = ks.map((k) => H.apparent_temperature[k]);
-    const t = pick === "max" ? Math.max(...feels) : Math.min(...feels);
+  WEAR_PARTS.forEach(([name, key, from, to, mode]) => {
+    const t = partTemp(data, date, from, to, mode);
+    if (t == null) return;
     const L = LEVELS[level(t)];
-    const row = el("div", "outfit" + (isToday && hourNow > to ? " past" : ""));
-    const w = el("div", "w", L.main); w.append(el("small", null, "מרגיש כמו " + r(t) + "°"));
-    row.append(el("div", "n", name), el("div", "e", L.emoji), w);
-    box.append(row);
+    wear.append(row(key, L.text, `${name} · ${feelWord(t)}`, r(t) + "°", isToday && hourNow > to ? "past" : ""));
   });
-  wearCard.append(box);
-  const { tips } = outfit(day);
-  const ul = el("ul", "wear");
-  tips.forEach(([e, t]) => { const li = el("li"); li.append(el("span", "e", e), el("span", null, t)); ul.append(li); });
-  wearCard.append(ul);
-  app.append(wearCard);
+  // Extra notes for the day
+  const rain = d.precipitation_probability_max[di] ?? 0, uv = d.uv_index_max[di] ?? 0, wind = d.wind_speed_10m_max[di] ?? 0;
+  const noonT = partTemp(data, date, 11, 16, "avg") ?? 0;
+  if (rain >= 30) wear.append(row("umbrella", rain >= 60 ? "לקחת מטרייה" : "כדאי מטרייה קטנה בתיק", `סיכוי לגשם ${rain}%`));
+  if (uv >= 6) wear.append(row("uv", "קרם הגנה וכובע", `קרינה חזקה, UV ${r(uv)}`));
+  else if (uv >= 3 && adj(noonT) >= 23) wear.append(row("uv", "קרם הגנה אם תהיו בחוץ", `קרינה בינונית, UV ${r(uv)}`));
+  if (wind >= 30) wear.append(row("wind", "משהו שעוצר רוח", `רוח עד ${r(wind)} קמ״ש`));
+  if (adj(noonT) >= 30) wear.append(row("water", "לשתות הרבה מים", "חם מאוד בצהריים"));
+  app.append(wearSec);
 
-  // Day in four parts
-  const partsCard = card(when + " לאורך היום");
-  const grid = el("div", "parts");
-  const base = H.time.indexOf(day.date + "T00:00");
-  PARTS.forEach(([name, from, to]) => {
-    const ks = []; for (let h = from; h <= to; h++) if (base >= 0 && H.time[base + h]) ks.push(base + h);
-    if (!ks.length) return;
-    const feelAvg = ks.reduce((s, k) => s + H.apparent_temperature[k], 0) / ks.length;
-    const tempAvg = ks.reduce((s, k) => s + H.temperature_2m[k], 0) / ks.length;
-    const rainMax = Math.max(...ks.map((k) => H.precipitation_probability[k] ?? 0));
-    const mid = ks[Math.floor(ks.length / 2)];
-    const p = el("div", "part");
-    const bar = el("div", "bar"); bar.style.background = tempColor(feelAvg);
-    p.append(el("div", "n", name), el("div", "i", sky(H.weather_code[mid], H.is_day[mid])[0]), el("div", "t", r(tempAvg) + "°"), bar,
-             el("div", "r", rainMax >= 30 ? "☂ " + rainMax + "%" : feel(feelAvg).word));
-    grid.append(p);
-  });
-  partsCard.append(grid);
-  app.append(partsCard);
-
-  // Next 24 hours, starting with the current hour
-  const hoursCard = card("24 השעות הקרובות");
+  // Hourly, starting at the current hour
+  const [hourSec, hourCard] = section(`תחזית שעתית · זריחה ${d.sunrise[today].slice(11, 16)} · שקיעה ${d.sunset[today].slice(11, 16)}`);
   const strip = el("div", "hours");
-  const nowHour = localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0");
-  let start = H.time.findIndex((t) => t.slice(0, 13) >= nowHour); if (start < 0) start = 0;
-  const end = Math.min(start + 24, H.time.length);
-  const slice = H.temperature_2m.slice(start, end);
-  const lo = Math.min(...slice) - 2, hi = Math.max(...slice) + 1;
-  for (let k = start; k < end; k++) {
-    const t = H.temperature_2m[k], rp = H.precipitation_probability[k] ?? 0;
-    const hr = el("div", "hour");
-    const col = el("div", "col"); const fill = el("div", "fill");
-    fill.style.height = Math.max(8, ((t - lo) / (hi - lo)) * 100) + "%"; fill.style.background = tempColor(H.apparent_temperature[k]);
-    col.append(fill);
-    hr.append(el("div", "tt", r(t) + "°"), col, el("div", null, sky(H.weather_code[k], H.is_day[k])[0]),
-              el("div", "rp", rp >= 20 ? rp + "%" : ""), el("div", "hh", k === start ? "עכשיו" : H.time[k].slice(11, 16)));
+  const nowKey = localDate(tz) + "T" + String(localHour(tz)).padStart(2, "0");
+  let start = H.time.findIndex((t) => t.slice(0, 13) >= nowKey); if (start < 0) start = 0;
+  for (let k = start; k < Math.min(start + 24, H.time.length); k++) {
+    const hr = el("div", "hour"), ic = el("div", "ic");
+    ic.append(svg(glyph(H.weather_code[k], H.is_day[k])));
+    const p = H.precipitation_probability[k] ?? 0;
+    if (p >= 20) ic.append(el("div", "p", p + "%"));
+    hr.append(el("div", "h", k === start ? "עכשיו" : H.time[k].slice(11, 13)), ic, el("div", "tt", r(H.temperature_2m[k]) + "°"));
     strip.append(hr);
   }
-  hoursCard.append(strip);
-  app.append(hoursCard);
+  hourCard.append(strip);
+  app.append(hourSec);
 
   // 7 days from today
-  const weekCard = card("השבוע");
-  const list = el("ul", "days");
+  const [weekSec, week] = section("7 ימים");
   const idxs = []; for (let i = today; i < Math.min(today + 7, d.time.length); i++) idxs.push(i);
-  const wkLo = Math.min(...idxs.map((i) => d.temperature_2m_min[i])), wkHi = Math.max(...idxs.map((i) => d.temperature_2m_max[i]));
+  const lo = Math.min(...idxs.map((i) => d.temperature_2m_min[i])), hi = Math.max(...idxs.map((i) => d.temperature_2m_max[i])), span = hi - lo || 1;
   const dayName = new Intl.DateTimeFormat("he-IL", { weekday: "short", timeZone: "UTC" });
   idxs.forEach((i, n) => {
-    const li = el("li");
-    const name = n === 0 ? "היום" : n === 1 ? "מחר" : dayName.format(new Date(d.time[i] + "T12:00:00Z"));
-    const track = el("div", "track"); const seg = el("div", "seg");
-    const span = wkHi - wkLo || 1;
-    seg.style.right = ((d.temperature_2m_min[i] - wkLo) / span) * 100 + "%";
-    seg.style.width = Math.max(4, ((d.temperature_2m_max[i] - d.temperature_2m_min[i]) / span) * 100) + "%";
-    seg.style.background = `linear-gradient(to left, ${tempColor(d.temperature_2m_min[i])}, ${tempColor(d.temperature_2m_max[i])})`;
-    track.append(seg);
-    const mm = el("div", "mm"); mm.append(el("b", null, r(d.temperature_2m_max[i]) + "°"), document.createTextNode(" / " + r(d.temperature_2m_min[i]) + "°"));
-    const icn = el("div", "di", sky(d.weather_code[i])[0]);
-    const rp = d.precipitation_probability_max[i] ?? 0;
-    if (rp >= 30) icn.append(el("small", null, rp + "%"));
-    li.append(el("div", "dn", name), icn, track, mm);
-    list.append(li);
+    const rw = el("div", "day");
+    const name = n === 0 ? "היום" : dayName.format(new Date(d.time[i] + "T12:00:00Z")).replace("יום ", "");
+    const ic = el("div", "ic"); ic.append(svg(glyph(d.weather_code[i])));
+    const p = d.precipitation_probability_max[i] ?? 0; if (p >= 30) ic.append(el("small", null, p + "%"));
+    const tr = el("div", "track"), bar = el("span");
+    bar.style.right = ((d.temperature_2m_min[i] - lo) / span) * 100 + "%";
+    bar.style.width = Math.max(6, ((d.temperature_2m_max[i] - d.temperature_2m_min[i]) / span) * 100) + "%";
+    bar.style.background = `linear-gradient(to left, ${tempColor(d.temperature_2m_min[i])}, ${tempColor(d.temperature_2m_max[i])})`;
+    tr.append(bar);
+    rw.append(el("div", "dn", name), ic, el("div", "lo", r(d.temperature_2m_min[i]) + "°"), tr, el("div", "hi", r(d.temperature_2m_max[i]) + "°"));
+    week.append(rw);
   });
-  weekCard.append(list);
-  app.append(weekCard);
+  app.append(weekSec);
 }
 
 function showError(err, kind) {
   const app = $("#app"); app.textContent = "";
-  const box = el("div", "msg", kind === "render"
-    ? "מזג האוויר הגיע, אבל משהו נשבר בהצגה שלו."
-    : "לא הצלחתי לטעון את מזג האוויר. בדקו שיש חיבור לאינטרנט.");
-  const detail = el("div", null, "פרטים: " + (err && err.message ? err.message : String(err)));
-  detail.style.cssText = "font-size:12px;margin-top:8px;opacity:.8";
-  const b = el("button", null, "נסו שוב"); b.style.marginTop = "10px"; b.onclick = refresh;
-  box.append(detail, b); app.append(box);
+  const box = el("div", "msg", kind === "render" ? "משהו השתבש בהצגת מזג האוויר." : "לא הצלחתי לטעון את מזג האוויר. בדקו שיש חיבור לאינטרנט.");
+  const det = el("div", null, err && err.message ? err.message : String(err)); det.style.cssText = "font-size:12px;margin-top:8px;opacity:.7";
+  const b = el("button", null, "נסו שוב"); b.onclick = refresh;
+  box.append(det, el("br"), b); app.append(box);
 }
 
 // ---------- start ----------
 const sel = $("#city");
-sel.add(new Option("📍 המיקום שלי", HERE));
+sel.add(new Option("המיקום שלי", HERE));
 CITIES.forEach((c, i) => sel.add(new Option(c[0], i)));
 const savedCity = store.get("city");
 sel.value = savedCity == null ? HERE : String(savedCity);
-if (sel.selectedIndex < 0) sel.value = "0";
-sel.onchange = () => { store.set("city", sel.value); state.tab = 0; refresh(); };
+if (sel.selectedIndex < 0) sel.value = HERE;
+sel.onchange = () => { store.set("city", sel.value); state.tab = 0; state.data = null; refresh(); };
 
 function paintBias() { document.querySelectorAll("#bias button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === bias)); }
-document.querySelectorAll("#bias button").forEach((b) => b.onclick = () => {
-  bias = +b.dataset.v; store.set("bias", bias); paintBias(); if (state.data) render();
-});
+document.querySelectorAll("#bias button").forEach((b) => b.onclick = () => { bias = +b.dataset.v; store.set("bias", bias); paintBias(); if (state.data) render(); });
 paintBias();
 
 let lastLoad = 0, busy = false;
 async function refresh() {
   if (busy) return; busy = true;
   try {
-    let name, lat, lon, tz;
+    let key, lat, lon, tz, place;
     if (sel.value === HERE) {
-      name = HERE; tz = "auto";
+      key = HERE; tz = "auto";
       const prev = store.get("here");
       try { [lat, lon] = await getPosition(); store.set("here", [lat, lon]); }
       catch (e) {
         if (prev) [lat, lon] = prev;
-        else { // no permission and nothing saved: show Tel Aviv instead of an error
-          sel.value = "0"; busy = false; $("#updated").textContent = "אין גישה למיקום, מציג תל אביב";
-          return refresh();
-        }
+        else { sel.value = "0"; busy = false; return refresh(); } // no permission: show Tel Aviv
       }
-      sel.options[0].textContent = "📍 " + nearest(lat, lon);
+      place = nearest(lat, lon);
     } else {
       const c = CITIES[+sel.value] || CITIES[0];
-      [name, lat, lon] = c; tz = "Asia/Jerusalem";
+      [place, lat, lon] = c; key = place; tz = "Asia/Jerusalem";
     }
-    const cached = store.get("wx:" + name);
+    state.place = place;
+    $("#locName").textContent = sel.value === HERE ? "המיקום שלי" : place;
+    const cached = store.get("wx:" + key);
     if (cached && !state.data) {
       state.data = cached.data; state.stale = true;
-      try { render(); $("#updated").textContent = "מציג נתונים שמורים…"; } catch { state.data = null; }
+      try { render(); } catch { state.data = null; }
     }
     let data;
     try { data = await load(lat, lon, tz); }
     catch (e) {
       if (!state.data) showError(e, "load");
-      else $("#updated").textContent = "אין חיבור. מציג נתונים מ-" + new Date(cached.at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+      else $("#updated").textContent = "אין חיבור · נתונים מ-" + new Date(cached.at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       return;
     }
     try {
       state.data = data; state.stale = false; lastLoad = Date.now();
-      store.set("wx:" + name, { data, at: lastLoad });
+      store.set("wx:" + key, { data, at: lastLoad });
       render();
-      $("#updated").textContent = (sel.value === "0" && store.get("city") == null ? "אין גישה למיקום, מציג תל אביב · " : "") + "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+      $("#updated").textContent = "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
     } catch (e) { console.error(e); showError(e, "render"); }
   } finally { busy = false; }
 }
-// Refresh on open, when the app comes back to the screen after 10+ minutes, and every 30 minutes while open.
 refresh();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastLoad > 10 * 60 * 1000) refresh(); });
 setInterval(() => { if (!document.hidden) refresh(); }, 30 * 60 * 1000);
-
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
