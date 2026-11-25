@@ -208,6 +208,16 @@ details.more[open] > summary { color: var(--label2); }
 .wk .rp { font-size: 13px; color: var(--blue); }
 .msg { text-align: center; color: var(--label2); padding: 80px 20px; }
 .msg button { margin-top: 14px; border: 0; background: var(--fill); color: var(--accent); border-radius: 10px; padding: 8px 18px; }
+/* abroad: city search sheet */
+#search { position: fixed; inset: 0; z-index: 60; background: var(--bg); padding: max(10px, env(safe-area-inset-top)) 16px 20px; overflow-y: auto; }
+#search[hidden] { display: none; }
+#search .top { max-width: 480px; margin: 0 auto; display: flex; gap: 10px; align-items: center; height: 44px; }
+#search input { flex: 1; min-width: 0; border: 0; background: var(--fill); color: var(--label); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 17px; outline: none; }
+#search .x { border: 0; background: none; color: var(--accent); font-size: 17px; padding: 0; }
+#search .list { max-width: 480px; margin: 14px auto 0; }
+#search .hint { text-align: center; color: var(--label2); font-size: 15px; padding: 30px 10px; }
+#search .row { cursor: pointer; border: 0; width: 100%; background: none; text-align: right; }
+#search .row .del { border: 0; background: none; color: var(--label3); font-size: 22px; padding: 0 4px; }
 .foot { text-align: center; font-size: 12px; color: var(--label3); margin-top: 22px; }
 .foot a { color: inherit; }
 </style>
@@ -223,6 +233,11 @@ details.more[open] > summary { color: var(--label2); }
       <svg viewBox="0 0 16 16" aria-hidden="true" style="width:11px;height:11px"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.5 6l4.5 4.5L12.5 6"/></svg>
       <select id="city" aria-label="בחירת מיקום"></select>
     </label>
+  </div>
+
+  <div id="search" hidden>
+    <div class="top"><input id="q" type="search" placeholder="חיפוש עיר בעולם, למשל לונדון" autocomplete="off" enterkeyhint="search"><button class="x" id="qClose">ביטול</button></div>
+    <div class="list" id="qList"></div>
   </div>
 
   <div id="app"><div class="msg">טוען…</div></div>
@@ -670,11 +685,77 @@ function showError(err, kind) {
 // ---------- start ----------
 const sel = $("#city");
 sel.add(new Option("המיקום שלי", HERE));
-CITIES.forEach((c, i) => sel.add(new Option(c[0], i)));
+const ABROAD = "abroad";
+let world = store.get("world") || []; // saved cities abroad: [{n, c, lat, lon}]
+function fillSelect() {
+  sel.innerHTML = "";
+  sel.add(new Option("המיקום שלי", HERE));
+  const il = document.createElement("optgroup"); il.label = "ישראל";
+  CITIES.forEach((c, i) => il.append(new Option(c[0], i)));
+  const ab = document.createElement("optgroup"); ab.label = "חו״ל";
+  world.forEach((w) => ab.append(new Option(w.n + (w.c ? ", " + w.c : ""), "w:" + w.lat + "," + w.lon)));
+  ab.append(new Option("חיפוש עיר בחו״ל…", ABROAD));
+  sel.append(il, ab);
+}
+fillSelect();
 const savedCity = store.get("city");
 sel.value = savedCity == null ? HERE : String(savedCity);
 if (sel.selectedIndex < 0) sel.value = HERE;
-sel.onchange = () => { store.set("city", sel.value); state.tab = null; state.data = null; refresh(); };
+let lastCity = sel.value;
+function pickCity(v) { sel.value = v; lastCity = v; store.set("city", v); state.tab = null; state.data = null; refresh(); }
+sel.onchange = () => { if (sel.value === ABROAD) { sel.value = lastCity; openSearch(); } else pickCity(sel.value); };
+
+// ---------- abroad: search any city (Open-Meteo geocoding) ----------
+const qList = $("#qList"), q = $("#q");
+function hint(t) { qList.innerHTML = ""; qList.append(el("div", "hint", t)); }
+function showSaved() {
+  if (!world.length) return hint("כתבו שם של עיר, בעברית או באנגלית");
+  qList.innerHTML = "";
+  const sec = el("div", "sec-h"); sec.append(el("span", null, "ערים ששמרת")); qList.append(sec);
+  const card = el("div", "card");
+  world.forEach((w, i) => {
+    const row = el("div", "row plain"), m = el("div", "main");
+    m.append(el("div", "t1", w.n), el("div", "t2", w.c || ""));
+    const del = el("button", "del", "×"); del.setAttribute("aria-label", "הסרה");
+    del.onclick = (e) => { e.stopPropagation(); const v = "w:" + w.lat + "," + w.lon; world.splice(i, 1); store.set("world", world); fillSelect(); if (lastCity === v) pickCity(HERE); else sel.value = lastCity; showSaved(); };
+    row.onclick = () => { closeSearch(); pickCity("w:" + w.lat + "," + w.lon); };
+    row.append(m, del); card.append(row);
+  });
+  qList.append(card);
+}
+function openSearch() { $("#search").hidden = false; q.value = ""; showSaved(); setTimeout(() => q.focus(), 50); }
+function closeSearch() { $("#search").hidden = true; q.blur(); }
+$("#qClose").onclick = closeSearch;
+let qTimer, qSeq = 0;
+q.oninput = () => {
+  clearTimeout(qTimer);
+  const text = q.value.trim();
+  if (text.length < 2) return showSaved();
+  qTimer = setTimeout(async () => {
+    const my = ++qSeq; hint("מחפש…");
+    try {
+      const res = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=he&name=" + encodeURIComponent(text));
+      if (!res.ok) throw new Error(res.status);
+      const j = await res.json(); if (my !== qSeq) return;
+      const list = j.results || [];
+      if (!list.length) return hint("לא מצאתי עיר בשם הזה");
+      qList.innerHTML = ""; const card = el("div", "card");
+      list.forEach((g) => {
+        const row = el("div", "row plain"), m = el("div", "main");
+        const sub = [g.admin1, g.country].filter((x, k, a) => x && a.indexOf(x) === k).join(", ");
+        m.append(el("div", "t1", g.name), el("div", "t2", sub));
+        row.onclick = () => {
+          const w = { n: g.name, c: g.country || "", lat: +g.latitude.toFixed(3), lon: +g.longitude.toFixed(3) };
+          const v = "w:" + w.lat + "," + w.lon;
+          world = [w, ...world.filter((x) => "w:" + x.lat + "," + x.lon !== v)].slice(0, 8);
+          store.set("world", world); fillSelect(); closeSearch(); pickCity(v);
+        };
+        row.append(m); card.append(row);
+      });
+      qList.append(card);
+    } catch (e) { if (my === qSeq) hint("אין חיבור, נסו שוב"); }
+  }, 350);
+};
 
 function paintBias() { document.querySelectorAll("#bias button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === bias)); }
 document.querySelectorAll("#bias button").forEach((b) => b.onclick = () => { bias = +b.dataset.v; store.set("bias", bias); paintBias(); if (state.data) render(); });
@@ -694,6 +775,10 @@ async function refresh() {
         else { sel.value = "0"; busy = false; return refresh(); } // no permission: show Tel Aviv
       }
       place = nearest(lat, lon);
+    } else if (sel.value.startsWith("w:")) {
+      const w = world.find((x) => "w:" + x.lat + "," + x.lon === sel.value);
+      if (!w) { busy = false; pickCity(HERE); return; }
+      place = w.n; lat = w.lat; lon = w.lon; key = sel.value; tz = "auto"; // the city's own clock
     } else {
       const c = CITIES[+sel.value] || CITIES[0];
       [place, lat, lon] = c; key = place; tz = "Asia/Jerusalem";
