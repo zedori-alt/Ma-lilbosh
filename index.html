@@ -190,7 +190,8 @@ html[data-style="subtle"] .stylebtn .dots i { background: var(--label3) !importa
 .chart svg { display: block; }
 .chart text { text-anchor: middle; font-family: var(--font); font-variant-numeric: tabular-nums; }
 .chart .ct { font-size: 15px; font-weight: 600; fill: var(--label); }
-.chart .ch { font-size: 12px; font-weight: 500; fill: var(--label2); }
+.chart-h { display: flex; direction: rtl; margin-top: 2px; }
+.chart-h span { flex: 0 0 auto; text-align: center; font-size: 12px; font-weight: 500; color: var(--label2); font-variant-numeric: tabular-nums; }
 .chart .cp { font-size: 11px; font-weight: 600; fill: var(--blue); }
 .wk .lo { color: var(--label2); text-align: center; }
 .wk .hi { text-align: center; font-weight: 600; }
@@ -614,7 +615,7 @@ function render() {
 
 // Smooth temperature curve for the next hours, coloured by how warm it feels. Scrolls sideways; "now" is on the right.
 function hourChart(H, from, to) {
-  const n = to - from, step = 52, W = n * step, Hh = 140, top = 52, bottom = 100;
+  const n = to - from, step = 52, W = n * step, Hh = 132, top = 52, bottom = 100;
   const ts = []; for (let k = from; k < to; k++) ts.push(H.temperature_2m[k]);
   const lo = Math.min(...ts), hi = Math.max(...ts), sp = hi - lo || 1;
   const X = (i) => W - (i + 0.5) * step, Y = (t) => bottom - ((t - lo) / sp) * (bottom - top);
@@ -630,7 +631,6 @@ function hourChart(H, from, to) {
   ts.forEach((t, i) => {
     const k = from + i, x = X(i), y = Y(t), pp = H.precipitation_probability[k] ?? 0;
     labels += `<text x="${x}" y="${y - 10}" class="ct">${r(t)}°</text>`;
-    labels += `<text x="${x}" y="${Hh - 2}" class="ch">${i === 0 ? "עכשיו" : H.time[k].slice(11, 13)}</text>`;
     if (pp >= 20) labels += `<text x="${x}" y="${Hh - 22}" class="cp">${pp}%</text>`;
     if (i % 1 === 0) icons += `<g transform="translate(${x - 11} 4) scale(0.92)">${glyph(H.weather_code[k], H.is_day[k])}</g>`;
   });
@@ -644,7 +644,13 @@ function hourChart(H, from, to) {
     <path d="${path}" fill="none" stroke="url(#cg)" stroke-width="4" stroke-linecap="round"/>
     ${pts.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--card)" stroke="${tempColor(H.apparent_temperature[from + i])}" stroke-width="2.5"/>`).join("")}
     ${icons}${labels}</svg>`;
-  wrap.append(t.content.firstChild);
+  const inner = el("div", "chart-in"); inner.style.width = W + "px";
+  inner.append(t.content.firstChild);
+  // hour labels as normal HTML text: Safari draws Hebrew inside SVG <text> backwards
+  const row = el("div", "chart-h");
+  ts.forEach((_, i) => { const c = el("span", null, i === 0 ? "עכשיו" : H.time[from + i].slice(11, 13)); c.style.width = step + "px"; row.append(c); });
+  inner.append(row);
+  wrap.append(inner);
   return wrap;
 }
 function sign(k) {
